@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
-import { TrendingUp, Calendar, CalendarDays, CalendarRange, Loader2 } from "lucide-react";
+import { TrendingUp, Calendar, CalendarDays, CalendarRange, Loader as Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useRevenueData, useDashboardStats, formatDate, formatPKR } from "@/hooks/use-data";

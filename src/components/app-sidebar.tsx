@@ -1,8 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import {
-  LayoutDashboard, Users, CalendarCheck, TrendingUp, Wallet,
-  AlertCircle, UserX, FileBarChart, Settings, LogOut, Dumbbell,
-} from "lucide-react";
+import { LayoutDashboard, Users, CalendarCheck, TrendingUp, Wallet, CircleAlert as AlertCircle, UserX, ChartBar as FileBarChart, Settings, LogOut, Dumbbell } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter,

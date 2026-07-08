@@ -1,8 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Users, UserCheck, UserX, Wallet, CalendarClock, AlertTriangle, TrendingUp, Bell,
-  UserPlus, ClipboardCheck, CreditCard, BarChart3, Activity, Heart, CheckCircle2, Receipt,
-} from "lucide-react";
+import { Users, UserCheck, UserX, Wallet, CalendarClock, TriangleAlert as AlertTriangle, TrendingUp, Bell, UserPlus, ClipboardCheck, CreditCard, ChartBar as BarChart3, Activity, Heart, CircleCheck as CheckCircle2, Receipt } from "lucide-react";
 import { StatCard } from "@/components/stat-card";
 import { PageHeader } from "@/components/page-header";
 import { useDashboardStats, useMembers, usePayments, useRevenueData, formatPKR, initials, formatDate } from "@/hooks/use-data";

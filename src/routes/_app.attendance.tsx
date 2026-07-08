@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Check, Calendar, User, Loader2 } from "lucide-react";
+import { Search, Check, Calendar, User, Loader as Loader2 } from "lucide-react";
 import { useMembers, useAttendance, useMarkAttendance, formatDate, initials } from "@/hooks/use-data";
 
 export const Route = createFileRoute("/_app/attendance")({

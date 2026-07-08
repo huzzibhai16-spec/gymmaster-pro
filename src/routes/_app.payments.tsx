@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
-import { Wallet, CheckCircle2, AlertCircle, HandCoins, Printer, Pencil, DollarSign, Loader2 } from "lucide-react";
+import { Wallet, CircleCheck as CheckCircle2, CircleAlert as AlertCircle, HandCoins, Printer, Pencil, DollarSign, Loader as Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
-import { Users, TrendingUp, UserPlus, UserX, Wallet, CalendarCheck, Download, Loader2 } from "lucide-react";
+import { Users, TrendingUp, UserPlus, UserX, Wallet, CalendarCheck, Download, Loader as Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";

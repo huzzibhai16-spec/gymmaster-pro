@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
-import { AlertCircle, Users, Wallet, Loader2 } from "lucide-react";
+import { CircleAlert as AlertCircle, Users, Wallet, Loader as Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useMembers, useDashboardStats, formatDate, formatPKR, initials } from "@/hooks/use-data";
