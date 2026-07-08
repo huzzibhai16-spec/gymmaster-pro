@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
-import { MEMBERS, MONTHLY_REVENUE, activeMembers, formatPKR, monthlyRevenueTotal, pendingDuesTotal, todaysRevenue, weeklyRevenue } from "@/lib/mock-data";
-import { Users, TrendingUp, UserPlus, UserX, Wallet, CalendarCheck, Download } from "lucide-react";
+import { Users, TrendingUp, UserPlus, UserX, Wallet, CalendarCheck, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { useMembers, useDashboardStats, useRevenueData, useAttendance, formatPKR } from "@/hooks/use-data";
 
 export const Route = createFileRoute("/_app/reports")({
   head: () => ({ meta: [{ title: "Reports — GymOS" }] }),
@@ -13,10 +13,31 @@ export const Route = createFileRoute("/_app/reports")({
 });
 
 function ReportsPage() {
-  const newThisMonth = MEMBERS.filter(m => {
-    const d = (Date.now() - new Date(m.joinDate).getTime()) / 86400000;
+  const { data: members, isLoading: membersLoading } = useMembers();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: revenueData, isLoading: revenueLoading } = useRevenueData();
+  const { data: todayAttendance } = useAttendance();
+
+  const isLoading = membersLoading || statsLoading || revenueLoading;
+
+  const newThisMonth = (members || []).filter(m => {
+    const d = (Date.now() - new Date(m.joining_date).getTime()) / 86400000;
     return d < 30;
   }).length;
+
+  const weeklyRevenue = revenueData?.daily.slice(-7).reduce((s, d) => s + d.revenue, 0) || 0;
+  const weeklyAttendance = 0; // Would need to aggregate attendance for the week
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Reports" description="Snapshot views of daily, weekly and monthly performance." />
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -35,28 +56,28 @@ function ReportsPage() {
 
         <TabsContent value="today" className="mt-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon={Wallet} label="Revenue" value={formatPKR(todaysRevenue())} tone="gold" trend={5.2} />
-            <StatCard icon={CalendarCheck} label="Attendance" value="47" tone="success" />
-            <StatCard icon={UserPlus} label="New Members" value="3" tone="gold" />
-            <StatCard icon={Users} label="Renewals" value="2" tone="success" />
+            <StatCard icon={Wallet} label="Revenue" value={formatPKR(stats?.todayRevenue || 0)} tone="gold" />
+            <StatCard icon={CalendarCheck} label="Attendance" value={(todayAttendance?.length || 0).toString()} tone="success" />
+            <StatCard icon={UserPlus} label="New Members" value={newThisMonth.toString()} tone="gold" />
+            <StatCard icon={Users} label="Active" value={(stats?.activeMembers || 0).toString()} tone="success" />
           </div>
         </TabsContent>
 
         <TabsContent value="weekly" className="mt-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon={Wallet} label="Weekly Revenue" value={formatPKR(weeklyRevenue())} tone="gold" trend={3.4} />
-            <StatCard icon={CalendarCheck} label="Attendance" value="284" tone="success" />
-            <StatCard icon={UserPlus} label="New Members" value="12" tone="gold" />
-            <StatCard icon={UserX} label="Inactive" value="8" tone="danger" />
+            <StatCard icon={Wallet} label="Weekly Revenue" value={formatPKR(weeklyRevenue)} tone="gold" />
+            <StatCard icon={CalendarCheck} label="Attendance" value="—" tone="success" />
+            <StatCard icon={UserPlus} label="New Members" value={newThisMonth.toString()} tone="gold" />
+            <StatCard icon={UserX} label="Inactive" value={(stats?.inactiveMembers || 0).toString()} tone="danger" />
           </div>
         </TabsContent>
 
         <TabsContent value="monthly" className="mt-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon={Wallet} label="Monthly Revenue" value={formatPKR(MONTHLY_REVENUE[MONTHLY_REVENUE.length - 1].revenue)} tone="gold" trend={8.6} />
-            <StatCard icon={Users} label="Active Members" value={activeMembers().toString()} tone="success" />
+            <StatCard icon={Wallet} label="Monthly Revenue" value={formatPKR(stats?.monthlyRevenue || 0)} tone="gold" />
+            <StatCard icon={Users} label="Active Members" value={(stats?.activeMembers || 0).toString()} tone="success" />
             <StatCard icon={UserPlus} label="New Members" value={newThisMonth.toString()} tone="gold" />
-            <StatCard icon={TrendingUp} label="YTD Revenue" value={formatPKR(monthlyRevenueTotal())} tone="success" />
+            <StatCard icon={TrendingUp} label="YTD Revenue" value={formatPKR(revenueData?.yearlyRevenueTotal || 0)} tone="success" />
           </div>
         </TabsContent>
       </Tabs>
@@ -65,7 +86,7 @@ function ReportsPage() {
         <h3 className="text-base font-semibold mb-4">Revenue Trend</h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={MONTHLY_REVENUE} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <LineChart data={revenueData?.yearly || []} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.05)" vertical={false} />
               <XAxis dataKey="month" stroke="oklch(0.72 0.012 80)" fontSize={11} tickLine={false} axisLine={false} />
               <YAxis stroke="oklch(0.72 0.012 80)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v / 1000}k`} />
@@ -80,12 +101,12 @@ function ReportsPage() {
         <div className="glass rounded-2xl p-5">
           <h3 className="text-base font-semibold mb-1">Pending Payments</h3>
           <p className="text-sm text-muted-foreground mb-4">Total outstanding across members.</p>
-          <div className="text-3xl font-semibold text-[color:var(--warning)]">{formatPKR(pendingDuesTotal())}</div>
+          <div className="text-3xl font-semibold text-[color:var(--warning)]">{formatPKR(stats?.pendingDuesTotal || 0)}</div>
         </div>
         <div className="glass rounded-2xl p-5">
-          <h3 className="text-base font-semibold mb-1">Membership Renewals</h3>
-          <p className="text-sm text-muted-foreground mb-4">Members renewed in the last 30 days.</p>
-          <div className="text-3xl font-semibold text-[color:var(--success)]">{Math.floor(activeMembers() * 0.18)}</div>
+          <h3 className="text-base font-semibold mb-1">Monthly Expenses</h3>
+          <p className="text-sm text-muted-foreground mb-4">Operating costs this month.</p>
+          <div className="text-3xl font-semibold text-destructive">{formatPKR(stats?.monthlyExpenses || 0)}</div>
         </div>
       </div>
     </div>

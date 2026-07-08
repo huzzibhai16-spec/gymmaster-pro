@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { PLAN_PRICE } from "@/lib/mock-data";
-import { Dumbbell, Upload } from "lucide-react";
+import { Dumbbell, Upload, Loader2 } from "lucide-react";
+import { useGym, useUpdateGym } from "@/hooks/use-data";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({ meta: [{ title: "Settings — GymOS" }] }),
@@ -13,6 +15,60 @@ export const Route = createFileRoute("/_app/settings")({
 });
 
 function SettingsPage() {
+  const { gym, loading } = useGym();
+  const updateGym = useUpdateGym();
+
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    currency: "PKR",
+    fine_enabled: true,
+    fine_amount: 200,
+    fine_grace_days: 30,
+    monthly_price: 3500,
+    quarterly_price: 9500,
+    half_yearly_price: 17000,
+    yearly_price: 30000,
+  });
+
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (gym) {
+      setFormData({
+        name: gym.name || "",
+        phone: gym.phone || "",
+        address: gym.address || "",
+        currency: gym.currency || "PKR",
+        fine_enabled: gym.fine_enabled ?? true,
+        fine_amount: gym.fine_amount || 200,
+        fine_grace_days: gym.fine_grace_days || 30,
+        monthly_price: gym.monthly_price || 3500,
+        quarterly_price: gym.quarterly_price || 9500,
+        half_yearly_price: gym.half_yearly_price || 17000,
+        yearly_price: gym.yearly_price || 30000,
+      });
+    }
+  }, [gym]);
+
+  async function handleSave() {
+    setSaving(true);
+    await updateGym.mutateAsync(formData);
+    setSaving(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Settings" description="Manage gym profile, pricing and system preferences." />
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title="Settings" description="Manage gym profile, pricing and system preferences." />
@@ -30,10 +86,27 @@ function SettingsPage() {
             <Button variant="outline"><Upload className="h-4 w-4 mr-1" /> Upload logo</Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Gym Name" value="Body Strong Gym" />
-            <Field label="Phone Number" value="+92 300 1234567" />
-            <Field label="Address" value="Main Boulevard, Gulberg III, Lahore" className="md:col-span-2" />
-            <Field label="Currency" value="PKR" />
+            <Field
+              label="Gym Name"
+              value={formData.name}
+              onChange={(v) => setFormData({ ...formData, name: v })}
+            />
+            <Field
+              label="Phone Number"
+              value={formData.phone}
+              onChange={(v) => setFormData({ ...formData, phone: v })}
+            />
+            <Field
+              label="Address"
+              value={formData.address}
+              onChange={(v) => setFormData({ ...formData, address: v })}
+              className="md:col-span-2"
+            />
+            <Field
+              label="Currency"
+              value={formData.currency}
+              onChange={(v) => setFormData({ ...formData, currency: v })}
+            />
             <div className="space-y-1.5">
               <Label className="text-xs">Theme</Label>
               <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 h-10 px-3 text-sm">
@@ -43,7 +116,9 @@ function SettingsPage() {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button className="gold-gradient text-primary-foreground">Save Changes</Button>
+            <Button onClick={handleSave} disabled={saving} className="gold-gradient text-primary-foreground">
+              {saving ? "Saving…" : "Save Changes"}
+            </Button>
           </div>
         </div>
 
@@ -55,20 +130,63 @@ function SettingsPage() {
                 <div className="text-sm">Enable automatic fines</div>
                 <div className="text-xs text-muted-foreground">Applied when absent 30+ days</div>
               </div>
-              <Switch defaultChecked />
+              <Switch
+                checked={formData.fine_enabled}
+                onCheckedChange={(v) => setFormData({ ...formData, fine_enabled: v })}
+              />
             </div>
-            <Field label="Fine Amount (PKR)" value="200" type="number" />
-            <Field label="Grace Period (days)" value="30" type="number" />
+            <Field
+              label="Fine Amount (PKR)"
+              value={formData.fine_amount}
+              type="number"
+              onChange={(v) => setFormData({ ...formData, fine_amount: parseInt(v) || 0 })}
+            />
+            <Field
+              label="Grace Period (days)"
+              value={formData.fine_grace_days}
+              type="number"
+              onChange={(v) => setFormData({ ...formData, fine_grace_days: parseInt(v) || 0 })}
+            />
           </div>
 
           <div className="glass rounded-2xl p-5 space-y-3">
             <h3 className="text-base font-semibold">Membership Prices</h3>
-            {Object.entries(PLAN_PRICE).map(([plan, price]) => (
-              <div key={plan} className="flex items-center gap-2">
-                <Label className="text-xs flex-1">{plan}</Label>
-                <Input defaultValue={price} type="number" className="h-9 w-32 bg-muted/40" />
-              </div>
-            ))}
+            <div className="flex items-center gap-2">
+              <Label className="text-xs flex-1">Monthly</Label>
+              <Input
+                value={formData.monthly_price}
+                type="number"
+                className="h-9 w-32 bg-muted/40"
+                onChange={(e) => setFormData({ ...formData, monthly_price: parseInt(e.target.value) || 0 })}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs flex-1">Quarterly</Label>
+              <Input
+                value={formData.quarterly_price}
+                type="number"
+                className="h-9 w-32 bg-muted/40"
+                onChange={(e) => setFormData({ ...formData, quarterly_price: parseInt(e.target.value) || 0 })}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs flex-1">Half-Yearly</Label>
+              <Input
+                value={formData.half_yearly_price}
+                type="number"
+                className="h-9 w-32 bg-muted/40"
+                onChange={(e) => setFormData({ ...formData, half_yearly_price: parseInt(e.target.value) || 0 })}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs flex-1">Yearly</Label>
+              <Input
+                value={formData.yearly_price}
+                type="number"
+                className="h-9 w-32 bg-muted/40"
+                onChange={(e) => setFormData({ ...formData, yearly_price: parseInt(e.target.value) || 0 })}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -76,11 +194,28 @@ function SettingsPage() {
   );
 }
 
-function Field({ label, value, type = "text", className }: { label: string; value: string | number; type?: string; className?: string }) {
+function Field({
+  label,
+  value,
+  type = "text",
+  className,
+  onChange,
+}: {
+  label: string;
+  value: string | number;
+  type?: string;
+  className?: string;
+  onChange?: (value: string) => void;
+}) {
   return (
     <div className={`space-y-1.5 ${className ?? ""}`}>
       <Label className="text-xs">{label}</Label>
-      <Input defaultValue={value} type={type} className="h-10 bg-muted/40" />
+      <Input
+        value={value}
+        type={type}
+        className="h-10 bg-muted/40"
+        onChange={(e) => onChange?.(e.target.value)}
+      />
     </div>
   );
 }

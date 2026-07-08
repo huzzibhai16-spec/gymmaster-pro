@@ -1,26 +1,25 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Dumbbell, Mail, Lock, ArrowRight } from "lucide-react";
+import { Dumbbell, Mail, Lock, ArrowRight, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/auth";
 
-export const Route = createFileRoute("/login")({
+export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
-      { title: "Sign in — GymOS" },
-      { name: "description", content: "Sign in to your GymOS dashboard." },
+      { title: "Sign up — GymOS" },
+      { name: "description", content: "Create your GymOS account and start managing your gym." },
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: LoginPage,
+  component: SignUpPage,
 });
 
-function LoginPage() {
+function SignUpPage() {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signUp } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,8 +31,9 @@ function LoginPage() {
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
+    const gymName = formData.get("gymName") as string;
 
-    const result = await signIn(email, password);
+    const result = await signUp(email, password, gymName);
 
     if (result.error) {
       setError(result.error);
@@ -66,15 +66,15 @@ function LoginPage() {
 
         <div className="max-w-md space-y-4">
           <h2 className="text-4xl font-semibold tracking-tight leading-tight">
-            Run your gym like a <span className="text-gold">world-class</span> operation.
+            Start your <span className="text-gold">gym's journey</span> with us.
           </h2>
           <p className="text-muted-foreground">
-            Members, attendance, payments and reports — one calm, powerful dashboard built for owners who care about the details.
+            Create an account to manage members, track attendance, process payments, and grow your gym business.
           </p>
           <div className="grid grid-cols-3 gap-3 pt-6">
             {[
-              { k: "1,240+", v: "Members" },
-              { k: "PKR 4.9M", v: "Yearly Revenue" },
+              { k: "1,240+", v: "Members Managed" },
+              { k: "PKR 4.9M", v: "Revenue Tracked" },
               { k: "99.9%", v: "Uptime" },
             ].map((s) => (
               <div key={s.v} className="glass rounded-xl p-3">
@@ -99,8 +99,8 @@ function LoginPage() {
           </div>
 
           <div className="space-y-1.5">
-            <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-            <p className="text-sm text-muted-foreground">Sign in to your gym dashboard.</p>
+            <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
+            <p className="text-sm text-muted-foreground">Start managing your gym today.</p>
           </div>
 
           {error && (
@@ -110,6 +110,20 @@ function LoginPage() {
           )}
 
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="gymName">Gym Name</Label>
+              <div className="relative">
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="gymName"
+                  name="gymName"
+                  type="text"
+                  placeholder="Body Strong Gym"
+                  required
+                  className="pl-9 h-11 bg-muted/40"
+                />
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -125,25 +139,20 @@ function LoginPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="Min 6 characters"
                   required
                   minLength={6}
                   className="pl-9 h-11 bg-muted/40"
                 />
               </div>
             </div>
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Checkbox defaultChecked /> Remember me on this device
-            </label>
           </div>
 
           <Button
@@ -151,17 +160,17 @@ function LoginPage() {
             disabled={loading}
             className="w-full h-11 gold-gradient text-primary-foreground hover:opacity-95 shadow-lg shadow-primary/20"
           >
-            {loading ? "Signing in…" : (
+            {loading ? "Creating account…" : (
               <>
-                Sign in <ArrowRight className="ml-1 h-4 w-4" />
+                Create account <ArrowRight className="ml-1 h-4 w-4" />
               </>
             )}
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            Don't have an account?{" "}
-            <Link to="/signup" className="text-primary hover:underline">
-              Create one
+            Already have an account?{" "}
+            <Link to="/login" className="text-primary hover:underline">
+              Sign in
             </Link>
           </p>
         </form>

@@ -1,14 +1,51 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { Bell, Search, User } from "lucide-react";
+import { Bell, Search, Dumbbell } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/lib/auth";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
 });
 
 function AppLayout() {
+  const { user, gym, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate({ to: "/login" });
+    }
+  }, [loading, user, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 rounded-xl gold-gradient grid place-items-center animate-pulse">
+            <Dumbbell className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const gymInitials = gym?.name
+    ? gym.name
+        .split(" ")
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "GY";
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -33,10 +70,10 @@ function AppLayout() {
                 </button>
                 <div className="flex items-center gap-2 pl-2 border-l border-border/60">
                   <div className="h-8 w-8 rounded-full gold-gradient grid place-items-center text-primary-foreground text-xs font-semibold">
-                    BS
+                    {gymInitials}
                   </div>
                   <div className="hidden sm:flex flex-col leading-tight">
-                    <span className="text-xs font-medium">Body Strong</span>
+                    <span className="text-xs font-medium">{gym?.name || "My Gym"}</span>
                     <span className="text-[10px] text-muted-foreground">Owner</span>
                   </div>
                 </div>

@@ -1,15 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Users, UserCheck, UserX, Wallet, CalendarClock, AlertTriangle, TrendingUp, Bell,
-  UserPlus, ClipboardCheck, CreditCard, BarChart3, Activity, Heart, CheckCircle2,
+  UserPlus, ClipboardCheck, CreditCard, BarChart3, Activity, Heart, CheckCircle2, Receipt,
 } from "lucide-react";
 import { StatCard } from "@/components/stat-card";
 import { PageHeader } from "@/components/page-header";
-import {
-  MEMBERS, MONTHLY_REVENUE, DAILY_SALES, totalMembers, activeMembers, inactiveMembers, expiringSoon,
-  pendingDuesTotal, pendingDuesCount, todaysRevenue, yesterdayRevenue, monthlyRevenueTotal,
-  formatPKR, initials, formatDate, daysBetween,
-} from "@/lib/mock-data";
+import { useDashboardStats, useMembers, usePayments, useRevenueData, formatPKR, initials, formatDate } from "@/hooks/use-data";
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -20,18 +16,60 @@ export const Route = createFileRoute("/_app/dashboard")({
 });
 
 function Dashboard() {
-  const today = todaysRevenue();
-  const yest = yesterdayRevenue();
-  const trend = ((today - yest) / yest) * 100;
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: members } = useMembers();
+  const { data: payments } = usePayments({ limit: 6 });
+  const { data: revenueData } = useRevenueData();
 
-  const inactive30 = MEMBERS.filter(m => daysBetween(m.lastVisit) > 30).length;
+  if (statsLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Dashboard" description="Loading your gym data…" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="glass rounded-2xl p-5 h-32 animate-pulse bg-muted/20" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const inactive30 = members?.filter((m) => {
+    if (!m.last_visit) return false;
+    const days = Math.floor((Date.now() - new Date(m.last_visit).getTime()) / 86400000);
+    return days > 30;
+  }).length || 0;
+
+  const expiringSoonCount = members?.filter((m) => {
+    const days = Math.ceil((new Date(m.expiry_date).getTime() - Date.now()) / 86400000);
+    return days >= 0 && days <= 7;
+  }).length || 0;
 
   const todaysTasks = [
-    { icon: Wallet, tone: "warning" as const, title: `Collect payments from ${pendingDuesCount()} members`, desc: `${formatPKR(pendingDuesTotal())} outstanding across active plans.` },
-    { icon: CalendarClock, tone: "danger" as const, title: `${expiringSoon()} memberships expire this week`, desc: "Reach out for renewals before they lapse." },
-    { icon: UserX, tone: "warning" as const, title: `${inactive30} members haven't visited in 30+ days`, desc: "Consider a win-back message or free session." },
-    { icon: TrendingUp, tone: trend >= 0 ? "success" as const : "danger" as const, title: trend >= 0 ? `Revenue up ${trend.toFixed(1)}% vs yesterday` : `Revenue down ${Math.abs(trend).toFixed(1)}% vs yesterday`, desc: `Today ${formatPKR(today)} · Yesterday ${formatPKR(yest)}` },
-    { icon: AlertTriangle, tone: "danger" as const, title: "3 members flagged with unpaid dues over 30 days", desc: "Fines have been automatically applied." },
+    {
+      icon: Wallet,
+      tone: "warning" as const,
+      title: `Collect payments from ${stats?.pendingDuesCount || 0} members`,
+      desc: `${formatPKR(stats?.pendingDuesTotal || 0)} outstanding across active plans.`
+    },
+    {
+      icon: CalendarClock,
+      tone: "danger" as const,
+      title: `${expiringSoonCount} memberships expire this week`,
+      desc: "Reach out for renewals before they lapse."
+    },
+    {
+      icon: UserX,
+      tone: "warning" as const,
+      title: `${inactive30} members haven't visited in 30+ days`,
+      desc: "Consider a win-back message or free session."
+    },
+    {
+      icon: TrendingUp,
+      tone: "success" as const,
+      title: `Monthly revenue: ${formatPKR(stats?.monthlyRevenue || 0)}`,
+      desc: `Net profit: ${formatPKR(stats?.netProfit || 0)}`
+    },
   ];
 
   const quickActions = [
@@ -41,43 +79,30 @@ function Dashboard() {
     { icon: BarChart3, label: "View Reports", to: "/reports" },
   ];
 
-  const recent = [...MEMBERS].slice(0, 6);
+  const recentMembers = members?.slice(0, 6) || [];
+  const recentPaymentsList = payments?.slice(0, 6) || [];
+  const recentAttendance = members
+    ?.filter((m) => m.last_visit)
+    .sort((a, b) => new Date(b.last_visit!).getTime() - new Date(a.last_visit!).getTime())
+    .slice(0, 6) || [];
 
-  // Recent payments — derive from members with payments made
-  const recentPayments = [...MEMBERS]
-    .filter(m => m.amountPaid > 0)
-    .sort((a, b) => new Date(b.joinDate).getTime() - new Date(a.joinDate).getTime())
-    .slice(0, 6)
-    .map((m, i) => ({
-      id: m.id,
-      name: m.name,
-      photo: m.photo,
-      amount: Math.round(m.amountPaid / (1 + (i % 3))),
-      method: i % 2 === 0 ? "Cash" : "Online",
-      date: DAILY_SALES[DAILY_SALES.length - 1 - (i % DAILY_SALES.length)].date,
-    }));
-
-  // Recent attendance — members with most recent visits
-  const recentAttendance = [...MEMBERS]
-    .sort((a, b) => new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime())
-    .slice(0, 6);
-
-  // Expiring soon list
-  const expiringList = MEMBERS
-    .filter(m => {
-      const d = (new Date(m.expiryDate).getTime() - Date.now()) / 86400000;
-      return d >= -1 && d <= 14;
+  const expiringList = members
+    ?.filter((m) => {
+      const days = Math.ceil((new Date(m.expiry_date).getTime() - Date.now()) / 86400000);
+      return days >= -1 && days <= 14;
     })
-    .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime())
-    .slice(0, 6);
+    .sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime())
+    .slice(0, 6) || [];
 
-  // Gym Health Score — composite metric out of 100
-  const total = totalMembers();
-  const activePct = (activeMembers() / total) * 100;
-  const collectionRate = (MEMBERS.reduce((s, m) => s + m.amountPaid, 0) /
-    MEMBERS.reduce((s, m) => s + m.amountPaid + m.remaining, 0)) * 100;
+  // Gym Health Score
+  const total = stats?.totalMembers || 1;
+  const activePct = ((stats?.activeMembers || 0) / total) * 100;
+  const totalFees = members?.reduce((s, m) => s + m.monthly_fee, 0) || 1;
+  const totalPaid = members?.reduce((s, m) => s + m.amount_paid, 0) || 0;
+  const totalPending = members?.reduce((s, m) => s + m.pending_dues, 0) || 0;
+  const collectionRate = (totalPaid / (totalPaid + totalPending || 1)) * 100;
   const attendanceHealth = 100 - (inactive30 / total) * 100;
-  const retentionHealth = 100 - (expiringSoon() / total) * 100;
+  const retentionHealth = 100 - (expiringSoonCount / total) * 100;
   const healthScore = Math.round(activePct * 0.3 + collectionRate * 0.3 + attendanceHealth * 0.25 + retentionHealth * 0.15);
   const healthTone = healthScore >= 80 ? "success" : healthScore >= 60 ? "warning" : "danger";
   const healthLabel = healthScore >= 80 ? "Excellent" : healthScore >= 60 ? "Healthy" : "Needs Attention";
@@ -88,6 +113,11 @@ function Dashboard() {
     { label: "Attendance", value: Math.round(attendanceHealth) },
     { label: "Retention", value: Math.round(retentionHealth) },
   ];
+
+  const randomColor = (id: string) => {
+    const hash = id.split("").reduce((acc, char) => char.charCodeAt(0) + acc, 0);
+    return `hsl(${hash % 360} 60% 55%)`;
+  };
 
   return (
     <div className="space-y-8">
@@ -117,50 +147,51 @@ function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Users} label="Total Members" value={totalMembers().toString()} tone="gold" trend={4.2} hint="All-time roster" />
-        <StatCard icon={UserCheck} label="Active Members" value={activeMembers().toString()} tone="success" trend={2.1} />
-        <StatCard icon={UserX} label="Inactive Members" value={inactiveMembers().toString()} tone="danger" trend={-1.4} />
-        <StatCard icon={Wallet} label="Today's Revenue" value={formatPKR(today)} tone="gold" trend={trend} />
-        <StatCard icon={TrendingUp} label="Monthly Revenue" value={formatPKR(MONTHLY_REVENUE[MONTHLY_REVENUE.length - 1].revenue)} tone="success" trend={8.6} />
-        <StatCard icon={AlertTriangle} label="Pending Dues" value={formatPKR(pendingDuesTotal())} tone="warning" hint={`${pendingDuesCount()} members`} />
-        <StatCard icon={CalendarClock} label="Expiring Soon" value={expiringSoon().toString()} tone="warning" hint="Next 7 days" />
-        <StatCard icon={TrendingUp} label="Yearly Revenue" value={formatPKR(monthlyRevenueTotal())} tone="gold" trend={12.4} />
+        <StatCard icon={Users} label="Total Members" value={(stats?.totalMembers || 0).toString()} tone="gold" hint="All-time roster" />
+        <StatCard icon={UserCheck} label="Active Members" value={(stats?.activeMembers || 0).toString()} tone="success" />
+        <StatCard icon={UserX} label="Inactive Members" value={(stats?.inactiveMembers || 0).toString()} tone="danger" />
+        <StatCard icon={Wallet} label="Today's Revenue" value={formatPKR(stats?.todayRevenue || 0)} tone="gold" />
+        <StatCard icon={TrendingUp} label="Monthly Revenue" value={formatPKR(stats?.monthlyRevenue || 0)} tone="success" />
+        <StatCard icon={AlertTriangle} label="Pending Dues" value={formatPKR(stats?.pendingDuesTotal || 0)} tone="warning" hint={`${stats?.pendingDuesCount || 0} members`} />
+        <StatCard icon={CalendarClock} label="Expiring Soon" value={expiringSoonCount.toString()} tone="warning" hint="Next 7 days" />
+        <StatCard icon={Activity} label="Today's Attendance" value={(stats?.todayAttendance || 0).toString()} tone="success" />
       </div>
 
-      {/* Revenue Trend + Action Center */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="glass rounded-2xl p-5 lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-base font-semibold">Revenue Trend</h3>
-              <p className="text-xs text-muted-foreground">Monthly revenue overview</p>
-            </div>
-            <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/15">This Year</Badge>
+      {/* Revenue Trend */}
+      <div className="glass rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-base font-semibold">Revenue Trend</h3>
+            <p className="text-xs text-muted-foreground">Monthly revenue overview</p>
           </div>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={MONTHLY_REVENUE} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="goldFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.82 0.145 88)" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="oklch(0.82 0.145 88)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.05)" vertical={false} />
-                <XAxis dataKey="month" stroke="oklch(0.72 0.012 80)" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="oklch(0.72 0.012 80)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v / 1000}k`} />
-                <Tooltip
-                  contentStyle={{ background: "oklch(0.19 0.007 65)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }}
-                  labelStyle={{ color: "oklch(0.72 0.012 80)" }}
-                  formatter={(v: number) => [formatPKR(v), "Revenue"]}
-                />
-                <Area type="monotone" dataKey="revenue" stroke="oklch(0.82 0.145 88)" strokeWidth={2} fill="url(#goldFill)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/15">This Year</Badge>
         </div>
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={revenueData?.yearly || []} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="goldFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="oklch(0.82 0.145 88)" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="oklch(0.82 0.145 88)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.05)" vertical={false} />
+              <XAxis dataKey="month" stroke="oklch(0.72 0.012 80)" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="oklch(0.72 0.012 80)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v / 1000}k`} />
+              <Tooltip
+                contentStyle={{ background: "oklch(0.19 0.007 65)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }}
+                labelStyle={{ color: "oklch(0.72 0.012 80)" }}
+                formatter={(v: number) => [formatPKR(v), "Revenue"]}
+              />
+              <Area type="monotone" dataKey="revenue" stroke="oklch(0.82 0.145 88)" strokeWidth={2} fill="url(#goldFill)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
-        {/* Action Center — Today's Tasks */}
+      {/* Action Center + Quick Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Action Center */}
         <div className="glass rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -189,10 +220,8 @@ function Dashboard() {
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Monthly Revenue bar chart + Gym Health Score */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Monthly Revenue Bar */}
         <div className="glass rounded-2xl p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -200,12 +229,12 @@ function Dashboard() {
               <p className="text-xs text-muted-foreground">Month-by-month collection performance</p>
             </div>
             <Badge className="bg-[color:var(--success)]/10 text-[color:var(--success)] border-[color:var(--success)]/20">
-              +8.6% MoM
+              YTD: {formatPKR(revenueData?.yearlyRevenueTotal || 0)}
             </Badge>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={MONTHLY_REVENUE} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <BarChart data={revenueData?.yearly || []} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="goldBar" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="oklch(0.82 0.145 88)" stopOpacity={0.95} />
@@ -226,27 +255,47 @@ function Dashboard() {
             </ResponsiveContainer>
           </div>
         </div>
+      </div>
 
+      {/* Financial Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            <h3 className="text-base font-semibold">Monthly Revenue</h3>
+          </div>
+          <div className="text-3xl font-semibold text-primary">{formatPKR(stats?.monthlyRevenue || 0)}</div>
+          <p className="text-xs text-muted-foreground mt-1">Collected this month</p>
+        </div>
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Receipt className="h-4 w-4 text-[color:var(--warning)]" />
+            <h3 className="text-base font-semibold">Monthly Expenses</h3>
+          </div>
+          <div className="text-3xl font-semibold text-[color:var(--warning)]">{formatPKR(stats?.monthlyExpenses || 0)}</div>
+          <p className="text-xs text-muted-foreground mt-1">Spent this month</p>
+        </div>
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Wallet className="h-4 w-4 text-[color:var(--success)]" />
+            <h3 className="text-base font-semibold">Net Profit</h3>
+          </div>
+          <div className={cn("text-3xl font-semibold", (stats?.netProfit || 0) >= 0 ? "text-[color:var(--success)]" : "text-destructive")}>
+            {formatPKR(stats?.netProfit || 0)}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Revenue minus expenses</p>
+        </div>
+      </div>
+
+      {/* Gym Health Score + Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Gym Health Score */}
         <div className="glass rounded-2xl p-5 flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Heart className="h-4 w-4 text-primary" />
-              <h3 className="text-base font-semibold">Gym Health Score</h3>
-            </div>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px]",
-                healthTone === "success" && "bg-[color:var(--success)]/10 text-[color:var(--success)] border-[color:var(--success)]/20",
-                healthTone === "warning" && "bg-[color:var(--warning)]/10 text-[color:var(--warning)] border-[color:var(--warning)]/20",
-                healthTone === "danger" && "bg-destructive/10 text-destructive border-destructive/20",
-              )}
-            >
-              {healthLabel}
-            </Badge>
+          <div className="flex items-center gap-2 mb-4">
+            <Heart className="h-4 w-4 text-primary" />
+            <h3 className="text-base font-semibold">Gym Health Score</h3>
           </div>
-          <div className="flex-1 flex flex-col items-center justify-center py-2">
+          <div className="flex-1 flex items-center justify-center">
             <HealthRing score={healthScore} tone={healthTone} />
           </div>
           <div className="mt-4 space-y-2.5">
@@ -271,35 +320,6 @@ function Dashboard() {
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Recent Payments + Recent Attendance + Expiring Soon */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Recent Payments */}
-        <div className="glass rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-primary" />
-              <h3 className="text-base font-semibold">Recent Payments</h3>
-            </div>
-            <Link to="/payments" className="text-xs text-primary hover:underline">View all</Link>
-          </div>
-          <div className="space-y-2">
-            {recentPayments.length === 0 && <EmptyState label="No payments yet" />}
-            {recentPayments.map((p) => (
-              <div key={p.id + p.date} className="flex items-center gap-3 rounded-xl border border-border/50 p-3 hover:border-primary/30 transition-colors">
-                <div className="h-9 w-9 rounded-full grid place-items-center text-xs font-semibold text-primary-foreground" style={{ background: p.photo }}>
-                  {initials(p.name)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium truncate">{p.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{formatDate(p.date)} · {p.method}</div>
-                </div>
-                <div className="text-sm font-semibold text-primary shrink-0">{formatPKR(p.amount)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* Recent Attendance */}
         <div className="glass rounded-2xl p-5">
@@ -313,16 +333,16 @@ function Dashboard() {
           <div className="space-y-2">
             {recentAttendance.length === 0 && <EmptyState label="No check-ins yet" />}
             {recentAttendance.map((m) => {
-              const d = daysBetween(m.lastVisit);
-              const rel = d <= 0 ? "Today" : d === 1 ? "Yesterday" : `${d}d ago`;
+              const days = m.last_visit ? Math.floor((Date.now() - new Date(m.last_visit).getTime()) / 86400000) : 0;
+              const rel = days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`;
               return (
                 <div key={m.id} className="flex items-center gap-3 rounded-xl border border-border/50 p-3 hover:border-primary/30 transition-colors">
-                  <div className="h-9 w-9 rounded-full grid place-items-center text-xs font-semibold text-primary-foreground" style={{ background: m.photo }}>
-                    {initials(m.name)}
+                  <div className="h-9 w-9 rounded-full grid place-items-center text-xs font-semibold text-primary-foreground" style={{ background: randomColor(m.id) }}>
+                    {initials(m.full_name)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium truncate">{m.name}</div>
-                    <div className="text-[11px] text-muted-foreground">{m.plan} · {m.attendanceCount} visits</div>
+                    <div className="text-sm font-medium truncate">{m.full_name}</div>
+                    <div className="text-[11px] text-muted-foreground">{m.membership_plan} · {m.attendance_count} visits</div>
                   </div>
                   <div className="flex items-center gap-1.5 text-[11px] text-[color:var(--success)] shrink-0">
                     <CheckCircle2 className="h-3.5 w-3.5" />
@@ -346,17 +366,17 @@ function Dashboard() {
           <div className="space-y-2">
             {expiringList.length === 0 && <EmptyState label="No memberships expiring soon" />}
             {expiringList.map((m) => {
-              const days = Math.ceil((new Date(m.expiryDate).getTime() - Date.now()) / 86400000);
+              const days = Math.ceil((new Date(m.expiry_date).getTime() - Date.now()) / 86400000);
               const tone = days <= 0 ? "danger" : days <= 3 ? "danger" : days <= 7 ? "warning" : "default";
               const label = days <= 0 ? "Expired" : days === 1 ? "1 day left" : `${days} days left`;
               return (
                 <div key={m.id} className="flex items-center gap-3 rounded-xl border border-border/50 p-3 hover:border-primary/30 transition-colors">
-                  <div className="h-9 w-9 rounded-full grid place-items-center text-xs font-semibold text-primary-foreground" style={{ background: m.photo }}>
-                    {initials(m.name)}
+                  <div className="h-9 w-9 rounded-full grid place-items-center text-xs font-semibold text-primary-foreground" style={{ background: randomColor(m.id) }}>
+                    {initials(m.full_name)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium truncate">{m.name}</div>
-                    <div className="text-[11px] text-muted-foreground">{m.plan} · {formatDate(m.expiryDate)}</div>
+                    <div className="text-sm font-medium truncate">{m.full_name}</div>
+                    <div className="text-[11px] text-muted-foreground">{m.membership_plan} · {formatDate(m.expiry_date)}</div>
                   </div>
                   <Badge
                     variant="outline"
@@ -376,27 +396,32 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Recently added members (existing) */}
+      {/* Recently Added Members */}
       <div className="glass rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-semibold">Recently Added Members</h3>
           <Link to="/members" className="text-xs text-primary hover:underline">View all</Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {recent.map((m) => (
+          {recentMembers.map((m) => (
             <div key={m.id} className="flex items-center gap-3 rounded-xl border border-border/50 p-3 hover:border-primary/30 transition-colors">
-              <div className="h-10 w-10 rounded-full grid place-items-center text-xs font-semibold text-primary-foreground" style={{ background: m.photo }}>
-                {initials(m.name)}
+              <div className="h-10 w-10 rounded-full grid place-items-center text-xs font-semibold text-primary-foreground" style={{ background: randomColor(m.id) }}>
+                {initials(m.full_name)}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium truncate">{m.name}</div>
-                <div className="text-xs text-muted-foreground">{m.plan} · Joined {formatDate(m.joinDate)}</div>
+                <div className="text-sm font-medium truncate">{m.full_name}</div>
+                <div className="text-xs text-muted-foreground">{m.membership_plan} · Joined {formatDate(m.joining_date)}</div>
               </div>
-              <Badge className={
-                m.status === "Active" ? "bg-[color:var(--success)]/10 text-[color:var(--success)] border-[color:var(--success)]/20" :
-                m.status === "Expiring" ? "bg-[color:var(--warning)]/10 text-[color:var(--warning)] border-[color:var(--warning)]/20" :
-                "bg-destructive/10 text-destructive border-destructive/20"
-              } variant="outline">{m.status}</Badge>
+              <Badge
+                className={cn(
+                  m.status === "Active" && "bg-[color:var(--success)]/10 text-[color:var(--success)] border-[color:var(--success)]/20",
+                  m.status === "Expiring" && "bg-[color:var(--warning)]/10 text-[color:var(--warning)] border-[color:var(--warning)]/20",
+                  m.status === "Inactive" && "bg-destructive/10 text-destructive border-destructive/20"
+                )}
+                variant="outline"
+              >
+                {m.status}
+              </Badge>
             </div>
           ))}
         </div>

@@ -1,4 +1,4 @@
-import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, CalendarCheck, TrendingUp, Wallet,
   AlertCircle, UserX, FileBarChart, Settings, LogOut, Dumbbell,
@@ -8,6 +8,7 @@ import {
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/lib/auth";
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -25,7 +26,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (r) => r.location.pathname });
-  const navigate = useNavigate();
+  const { gym, signOut } = useAuth();
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -37,7 +38,9 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-semibold tracking-tight">GymOS</span>
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Body Strong</span>
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                {gym?.name || "My Gym"}
+              </span>
             </div>
           )}
         </div>
@@ -75,7 +78,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip="Logout"
-              onClick={() => navigate({ to: "/login" })}
+              onClick={signOut}
               className="text-muted-foreground hover:text-destructive h-10"
             >
               <LogOut className="h-4.5 w-4.5" />
