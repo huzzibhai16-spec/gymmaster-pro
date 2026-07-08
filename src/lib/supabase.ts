@@ -17,6 +17,7 @@ export type Gym = {
   phone: string | null;
   address: string | null;
   currency: string;
+  logo_url: string | null;
   fine_enabled: boolean;
   fine_amount: number;
   fine_grace_days: number;

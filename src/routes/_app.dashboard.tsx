@@ -142,16 +142,16 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* Stats */}
+      {/* Stats - Clickable to navigate to relevant pages */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Users} label="Total Members" value={(stats?.totalMembers || 0).toString()} tone="gold" hint="All-time roster" />
-        <StatCard icon={UserCheck} label="Active Members" value={(stats?.activeMembers || 0).toString()} tone="success" />
-        <StatCard icon={UserX} label="Inactive Members" value={(stats?.inactiveMembers || 0).toString()} tone="danger" />
-        <StatCard icon={Wallet} label="Today's Revenue" value={formatPKR(stats?.todayRevenue || 0)} tone="gold" />
-        <StatCard icon={TrendingUp} label="Monthly Revenue" value={formatPKR(stats?.monthlyRevenue || 0)} tone="success" />
-        <StatCard icon={AlertTriangle} label="Pending Dues" value={formatPKR(stats?.pendingDuesTotal || 0)} tone="warning" hint={`${stats?.pendingDuesCount || 0} members`} />
-        <StatCard icon={CalendarClock} label="Expiring Soon" value={expiringSoonCount.toString()} tone="warning" hint="Next 7 days" />
-        <StatCard icon={Activity} label="Today's Attendance" value={(stats?.todayAttendance || 0).toString()} tone="success" />
+        <Link to="/members"><StatCard icon={Users} label="Total Members" value={(stats?.totalMembers || 0).toString()} tone="gold" hint="All-time roster" /></Link>
+        <Link to="/members"><StatCard icon={UserCheck} label="Active Members" value={(stats?.activeMembers || 0).toString()} tone="success" /></Link>
+        <Link to="/inactive"><StatCard icon={UserX} label="Inactive Members" value={(stats?.inactiveMembers || 0).toString()} tone="danger" /></Link>
+        <Link to="/revenue"><StatCard icon={Wallet} label="Today's Revenue" value={formatPKR(stats?.todayRevenue || 0)} tone="gold" /></Link>
+        <Link to="/revenue"><StatCard icon={TrendingUp} label="Monthly Revenue" value={formatPKR(stats?.monthlyRevenue || 0)} tone="success" /></Link>
+        <Link to="/pending-dues"><StatCard icon={AlertTriangle} label="Pending Dues" value={formatPKR(stats?.pendingDuesTotal || 0)} tone="warning" hint={`${stats?.pendingDuesCount || 0} members`} /></Link>
+        <Link to="/members"><StatCard icon={CalendarClock} label="Expiring Soon" value={expiringSoonCount.toString()} tone="warning" hint="Next 7 days" /></Link>
+        <Link to="/attendance"><StatCard icon={Activity} label="Today's Attendance" value={(stats?.todayAttendance || 0).toString()} tone="success" /></Link>
       </div>
 
       {/* Revenue Trend */}

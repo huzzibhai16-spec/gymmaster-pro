@@ -20,6 +20,7 @@ import { Route as AppPendingDuesRouteImport } from './routes/_app.pending-dues'
 import { Route as AppPaymentsRouteImport } from './routes/_app.payments'
 import { Route as AppMembersRouteImport } from './routes/_app.members'
 import { Route as AppInactiveRouteImport } from './routes/_app.inactive'
+import { Route as AppExpensesRouteImport } from './routes/_app.expenses'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppAttendanceRouteImport } from './routes/_app.attendance'
 
@@ -77,6 +78,11 @@ const AppInactiveRoute = AppInactiveRouteImport.update({
   path: '/inactive',
   getParentRoute: () => AppRoute,
 } as any)
+const AppExpensesRoute = AppExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/attendance': typeof AppAttendanceRoute
   '/dashboard': typeof AppDashboardRoute
+  '/expenses': typeof AppExpensesRoute
   '/inactive': typeof AppInactiveRoute
   '/members': typeof AppMembersRoute
   '/payments': typeof AppPaymentsRoute
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/attendance': typeof AppAttendanceRoute
   '/dashboard': typeof AppDashboardRoute
+  '/expenses': typeof AppExpensesRoute
   '/inactive': typeof AppInactiveRoute
   '/members': typeof AppMembersRoute
   '/payments': typeof AppPaymentsRoute
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_app/attendance': typeof AppAttendanceRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/expenses': typeof AppExpensesRoute
   '/_app/inactive': typeof AppInactiveRoute
   '/_app/members': typeof AppMembersRoute
   '/_app/payments': typeof AppPaymentsRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/attendance'
     | '/dashboard'
+    | '/expenses'
     | '/inactive'
     | '/members'
     | '/payments'
@@ -154,6 +164,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/attendance'
     | '/dashboard'
+    | '/expenses'
     | '/inactive'
     | '/members'
     | '/payments'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_app/attendance'
     | '/_app/dashboard'
+    | '/_app/expenses'
     | '/_app/inactive'
     | '/_app/members'
     | '/_app/payments'
@@ -264,6 +276,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInactiveRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/expenses': {
+      id: '/_app/expenses'
+      path: '/expenses'
+      fullPath: '/expenses'
+      preLoaderRoute: typeof AppExpensesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -284,6 +303,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppAttendanceRoute: typeof AppAttendanceRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppExpensesRoute: typeof AppExpensesRoute
   AppInactiveRoute: typeof AppInactiveRoute
   AppMembersRoute: typeof AppMembersRoute
   AppPaymentsRoute: typeof AppPaymentsRoute
@@ -296,6 +316,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAttendanceRoute: AppAttendanceRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppExpensesRoute: AppExpensesRoute,
   AppInactiveRoute: AppInactiveRoute,
   AppMembersRoute: AppMembersRoute,
   AppPaymentsRoute: AppPaymentsRoute,

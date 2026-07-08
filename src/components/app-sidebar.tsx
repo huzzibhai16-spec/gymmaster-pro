@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Users, CalendarCheck, TrendingUp, Wallet, CircleAlert as AlertCircle, UserX, ChartBar as FileBarChart, Settings, LogOut, Dumbbell } from "lucide-react";
+import { LayoutDashboard, Users, CalendarCheck, TrendingUp, Wallet, CircleAlert as AlertCircle, UserX, ChartBar as FileBarChart, Settings, LogOut, Dumbbell, Receipt } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter,
@@ -13,6 +13,7 @@ const items = [
   { title: "Attendance", url: "/attendance", icon: CalendarCheck },
   { title: "Revenue", url: "/revenue", icon: TrendingUp },
   { title: "Payments", url: "/payments", icon: Wallet },
+  { title: "Expenses", url: "/expenses", icon: Receipt },
   { title: "Pending Dues", url: "/pending-dues", icon: AlertCircle },
   { title: "Inactive Members", url: "/inactive", icon: UserX },
   { title: "Reports", url: "/reports", icon: FileBarChart },
@@ -29,8 +30,14 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border py-4">
         <div className="flex items-center gap-2.5 px-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg gold-gradient shadow-lg shadow-primary/20">
-            <Dumbbell className="h-5 w-5 text-primary-foreground" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden shadow-lg shadow-primary/20">
+            {gym?.logo_url ? (
+              <img src={gym.logo_url} alt="Gym logo" className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full w-full gold-gradient grid place-items-center">
+                <Dumbbell className="h-5 w-5 text-primary-foreground" />
+              </div>
+            )}
           </div>
           {!collapsed && (
             <div className="flex flex-col leading-tight">

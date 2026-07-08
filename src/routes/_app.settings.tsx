@@ -1,13 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Dumbbell, Upload, Loader as Loader2 } from "lucide-react";
+import { Dumbbell, Upload, Loader as Loader2, X } from "lucide-react";
 import { useGym, useUpdateGym } from "@/hooks/use-data";
-import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({ meta: [{ title: "Settings — GymOS" }] }),
@@ -23,6 +22,7 @@ function SettingsPage() {
     phone: "",
     address: "",
     currency: "PKR",
+    logo_url: "" as string | null,
     fine_enabled: true,
     fine_amount: 200,
     fine_grace_days: 30,
@@ -33,6 +33,7 @@ function SettingsPage() {
   });
 
   const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (gym) {
@@ -41,6 +42,7 @@ function SettingsPage() {
         phone: gym.phone || "",
         address: gym.address || "",
         currency: gym.currency || "PKR",
+        logo_url: gym.logo_url || null,
         fine_enabled: gym.fine_enabled ?? true,
         fine_amount: gym.fine_amount || 200,
         fine_grace_days: gym.fine_grace_days || 30,
@@ -51,6 +53,37 @@ function SettingsPage() {
       });
     }
   }, [gym]);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Image must be less than 2MB");
+      return;
+    }
+
+    // Convert to base64 for storage
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormData(prev => ({ ...prev, logo_url: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setFormData(prev => ({ ...prev, logo_url: null }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   async function handleSave() {
     setSaving(true);
@@ -80,10 +113,30 @@ function SettingsPage() {
             <p className="text-xs text-muted-foreground">Public identity of your gym.</p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-2xl gold-gradient grid place-items-center">
-              <Dumbbell className="h-8 w-8 text-primary-foreground" />
+            <div className="h-16 w-16 rounded-2xl overflow-hidden grid place-items-center bg-primary/10 ring-1 ring-primary/20">
+              {formData.logo_url ? (
+                <img src={formData.logo_url} alt="Gym logo" className="h-full w-full object-cover" />
+              ) : (
+                <Dumbbell className="h-8 w-8 text-primary" />
+              )}
             </div>
-            <Button variant="outline"><Upload className="h-4 w-4 mr-1" /> Upload logo</Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleLogoUpload}
+              className="hidden"
+            />
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-4 w-4 mr-1" /> Upload logo
+              </Button>
+              {formData.logo_url && (
+                <Button variant="ghost" size="icon" onClick={handleRemoveLogo} className="h-9 w-9 text-muted-foreground hover:text-destructive">
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field
