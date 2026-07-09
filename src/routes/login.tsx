@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dumbbell, Mail, Lock, ArrowRight, Loader as Loader2, Shield, Building2 } from "lucide-react";
+import { ensureDefaultAccounts } from "@/lib/seed-accounts.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
