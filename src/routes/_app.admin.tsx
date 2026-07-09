@@ -1,11 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { useAdminDashboardStats, useAllGyms, useAllGymOwners, useUpdateUserProfile, formatPKR } from "@/hooks/use-data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, Users, DollarSign, UserCheck, UserX, MoveVertical as MoreVertical, Loader as Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Building2, Users, DollarSign, UserCheck, UserX, MoveVertical as MoreVertical, Loader as Loader2, UserPlus, Search, Dumbbell } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
 
 export const Route = createFileRoute("/_app/admin")({
   head: () => ({
@@ -35,11 +40,39 @@ export const Route = createFileRoute("/_app/admin")({
 });
 
 function AdminDashboardPage() {
+  const navigate = useNavigate();
+  const { isAdmin, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<"overview" | "gyms" | "owners">("overview");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
   const { data: stats, isLoading: statsLoading } = useAdminDashboardStats();
   const { data: gyms, isLoading: gymsLoading } = useAllGyms();
   const { data: owners, isLoading: ownersLoading } = useAllGymOwners();
   const updateProfile = useUpdateUserProfile();
+
+  // Redirect non-admins to dashboard
+  useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      navigate({ to: "/dashboard" });
+    }
+  }, [authLoading, isAdmin, navigate]);
+
+  // Show loading while checking auth
+  if (authLoading || !isAdmin) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 rounded-xl gold-gradient grid place-items-center animate-pulse">
+            <Dumbbell className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSuspend = (userId: string, isSuspended: boolean) => {
     updateProfile.mutate({
@@ -48,9 +81,107 @@ function AdminDashboardPage() {
     });
   };
 
+  // Filter owners by search query
+  const filteredOwners = owners?.filter((owner) =>
+    owner.user_id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Handle creating a new gym owner
+  const handleCreateOwner = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setCreateLoading(true);
+    setCreateError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+    const gymName = formData.get("gymName") as string;
+
+    try {
+      // Create auth user with Supabase admin API (via edge function would be better in production)
+      // For now, we'll use the regular signUp which creates a gym_owner by default
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (authError) {
+        setCreateError(authError.message);
+        setCreateLoading(false);
+        return;
+      }
+
+      if (authData.user) {
+        // Create gym for the new user
+        const { error: gymError } = await supabase.from("gyms").insert({
+          user_id: authData.user.id,
+          name: gymName,
+        });
+
+        if (gymError) {
+          setCreateError(gymError.message);
+          setCreateLoading(false);
+          return;
+        }
+      }
+
+      setCreateOpen(false);
+      // Refresh the data by invalidating queries
+      window.location.reload();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Admin Dashboard" subtitle="Manage all gyms and gym owners" />
+      <PageHeader
+        title="Admin Dashboard"
+        subtitle="Manage all gyms and gym owners"
+        actions={
+          <Button onClick={() => setCreateOpen(true)} className="gold-gradient text-primary-foreground hover:opacity-95">
+            <UserPlus className="h-4 w-4 mr-1" /> Create Gym Owner
+          </Button>
+        }
+      />
+
+      {/* Create Gym Owner Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-md bg-popover border-border">
+          <DialogHeader>
+            <DialogTitle>Create New Gym Owner</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateOwner}>
+            {createError && (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 mb-4">
+                {createError}
+              </div>
+            )}
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Gym Name</Label>
+                <Input name="gymName" required placeholder="e.g., Elite Fitness Gym" className="h-10 bg-muted/40" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Email Address</Label>
+                <Input name="email" type="email" required placeholder="owner@gym.com" className="h-10 bg-muted/40" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Password</Label>
+                <Input name="password" type="password" required minLength={6} placeholder="Min 6 characters" className="h-10 bg-muted/40" />
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={createLoading} className="gold-gradient text-primary-foreground">
+                {createLoading ? "Creating..." : "Create Owner"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -241,8 +372,21 @@ function AdminDashboardPage() {
       {activeTab === "owners" && (
         <Card>
           <CardHeader>
-            <CardTitle>Gym Owners</CardTitle>
-            <CardDescription>Manage gym owner accounts</CardDescription>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <CardTitle>Gym Owners</CardTitle>
+                <CardDescription>Manage gym owner accounts</CardDescription>
+              </div>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by user ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9 bg-muted/40"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {ownersLoading ? (
@@ -261,7 +405,7 @@ function AdminDashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {owners?.map((owner) => (
+                  {filteredOwners?.map((owner) => (
                     <TableRow key={owner.id}>
                       <TableCell className="font-mono text-sm">
                         {owner.user_id.slice(0, 8)}...
