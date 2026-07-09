@@ -68,6 +68,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (profileError) {
       console.error("Error fetching profile:", profileError);
     }
+
+    // Check for suspended account
+    if (profileData?.is_suspended) {
+      // Sign out suspended users immediately
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setGym(null);
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+
     setProfile(profileData);
 
     // If admin, don't fetch gym (admin manages all gyms)
