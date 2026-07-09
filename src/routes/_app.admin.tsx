@@ -139,7 +139,7 @@ function AdminDashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Admin Dashboard"
-        subtitle="Manage all gyms and gym owners"
+        description="Manage all gyms and gym owners"
         actions={
           <Button onClick={() => setCreateOpen(true)} className="gold-gradient text-primary-foreground hover:opacity-95">
             <UserPlus className="h-4 w-4 mr-1" /> Create Gym Owner
@@ -186,28 +186,30 @@ function AdminDashboardPage() {
       {/* Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Gyms"
-          value={statsLoading ? "..." : stats?.totalGyms || 0}
-          description="Registered gyms"
-          icon={<Building2 className="h-4 w-4" />}
+          label="Total Gyms"
+          value={statsLoading ? "..." : String(stats?.totalGyms ?? 0)}
+          hint="Registered gyms"
+          icon={Building2}
+          tone="gold"
         />
         <StatCard
-          title="Total Members"
-          value={statsLoading ? "..." : stats?.totalMembers || 0}
-          description="Across all gyms"
-          icon={<Users className="h-4 w-4" />}
+          label="Total Members"
+          value={statsLoading ? "..." : String(stats?.totalMembers ?? 0)}
+          hint="Across all gyms"
+          icon={Users}
         />
         <StatCard
-          title="Monthly Revenue"
+          label="Monthly Revenue"
           value={statsLoading ? "..." : formatPKR(stats?.monthlyRevenue || 0)}
-          description="Platform total"
-          icon={<DollarSign className="h-4 w-4" />}
+          hint="Platform total"
+          icon={DollarSign}
+          tone="success"
         />
         <StatCard
-          title="Active Owners"
-          value={statsLoading ? "..." : stats?.activeOwners || 0}
-          description={`${stats?.suspendedOwners || 0} suspended`}
-          icon={<UserCheck className="h-4 w-4" />}
+          label="Active Owners"
+          value={statsLoading ? "..." : String(stats?.activeOwners ?? 0)}
+          hint={`${stats?.suspendedOwners || 0} suspended`}
+          icon={UserCheck}
         />
       </div>
 
