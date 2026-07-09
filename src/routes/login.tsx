@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Dumbbell, Mail, Lock, ArrowRight, Loader as Loader2 } from "lucide-react";
+import { Dumbbell, Mail, Lock, ArrowRight, Loader as Loader2, Shield, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,15 @@ function LoginPage() {
   const { signIn } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"admin" | "gym_owner" | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!selectedRole) {
+      setError("Please select a login type");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -83,6 +89,38 @@ function LoginPage() {
                 {error}
               </div>
             )}
+
+            {/* Role Selection Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedRole("admin")}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
+                  selectedRole === "admin"
+                    ? "border-[#D4AF37] bg-[#D4AF37]/10 shadow-lg shadow-[#D4AF37]/20"
+                    : "border-[#2A2A2A] bg-[#1A1A1A] hover:border-[#D4AF37]/50"
+                }`}
+              >
+                <Shield className={`h-6 w-6 ${selectedRole === "admin" ? "text-[#D4AF37]" : "text-gray-400"}`} />
+                <span className={`text-sm font-medium ${selectedRole === "admin" ? "text-white" : "text-gray-400"}`}>
+                  Admin
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedRole("gym_owner")}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
+                  selectedRole === "gym_owner"
+                    ? "border-[#D4AF37] bg-[#D4AF37]/10 shadow-lg shadow-[#D4AF37]/20"
+                    : "border-[#2A2A2A] bg-[#1A1A1A] hover:border-[#D4AF37]/50"
+                }`}
+              >
+                <Building2 className={`h-6 w-6 ${selectedRole === "gym_owner" ? "text-[#D4AF37]" : "text-gray-400"}`} />
+                <span className={`text-sm font-medium ${selectedRole === "gym_owner" ? "text-white" : "text-gray-400"}`}>
+                  Gym Owner
+                </span>
+              </button>
+            </div>
 
             <div className="space-y-4">
               {/* Email Field */}

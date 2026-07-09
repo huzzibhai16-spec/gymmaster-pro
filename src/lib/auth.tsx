@@ -115,15 +115,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (data.user) {
-      // User profile is created automatically via trigger
-      // Create gym for the new user
-      const { error: gymError } = await supabase.from("gyms").insert({
-        user_id: data.user.id,
-        name: gymName,
-      });
+      // Wait briefly for trigger to create user_profile
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (gymError) {
-        return { error: gymError.message };
+      // Check if this user is an admin (first user)
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+
+      // Only create gym for gym_owners (not admins)
+      if (profile?.role !== "admin") {
+        const { error: gymError } = await supabase.from("gyms").insert({
+          user_id: data.user.id,
+          name: gymName,
+        });
+
+        if (gymError) {
+          return { error: gymError.message };
+        }
       }
     }
 
