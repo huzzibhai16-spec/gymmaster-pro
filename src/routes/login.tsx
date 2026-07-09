@@ -25,6 +25,11 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<"admin" | "gym_owner" | null>(null);
 
+  // Ensure the default test accounts exist (idempotent, runs once on mount).
+  useEffect(() => {
+    ensureDefaultAccounts().catch((err) => console.error("[seed]", err));
+  }, []);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!selectedRole) {
