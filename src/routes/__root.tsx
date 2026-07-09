@@ -80,11 +80,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "GymOS — Body Strong Gym Management" },
       { name: "description", content: "Premium gym management dashboard: members, attendance, payments and revenue in one calm workspace." },
-      { property: "og:title", content: "GymOS — Body Strong" },
-      { property: "og:description", content: "Premium gym management dashboard for owners and receptionists." },
+      { property: "og:title", content: "GymOS — Body Strong Gym Management" },
+      { property: "og:description", content: "Premium gym management dashboard: members, attendance, payments and revenue in one calm workspace." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "robots", content: "noindex" },
+      { name: "twitter:title", content: "GymOS — Body Strong Gym Management" },
+      { name: "twitter:description", content: "Premium gym management dashboard: members, attendance, payments and revenue in one calm workspace." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Z5qjtcKl1AgYympxx6y2XD0lNGp2/social-images/social-1783608998721-Screenshot_2026-07-07_190817.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Z5qjtcKl1AgYympxx6y2XD0lNGp2/social-images/social-1783608998721-Screenshot_2026-07-07_190817.webp" },
     ],
     links: [
       {
