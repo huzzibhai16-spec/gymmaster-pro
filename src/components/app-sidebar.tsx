@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Users, CalendarCheck, TrendingUp, Wallet, CircleAlert as AlertCircle, UserX, ChartBar as FileBarChart, Settings, LogOut, Dumbbell, Receipt } from "lucide-react";
+import { LayoutDashboard, Users, CalendarCheck, TrendingUp, Wallet, CircleAlert as AlertCircle, UserX, ChartBar as FileBarChart, Settings, LogOut, Dumbbell, Receipt, Shield } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter,
@@ -7,7 +7,8 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
 
-const items = [
+// Gym Owner menu items
+const gymOwnerItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Members", url: "/members", icon: Users },
   { title: "Attendance", url: "/attendance", icon: CalendarCheck },
@@ -20,11 +21,20 @@ const items = [
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
+// Admin menu items
+const adminItems = [
+  { title: "Admin Dashboard", url: "/admin", icon: Shield },
+  { title: "All Gyms", url: "/admin", icon: LayoutDashboard },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (r) => r.location.pathname });
-  const { gym, signOut } = useAuth();
+  const { gym, isAdmin, signOut } = useAuth();
+
+  // Select menu items based on role
+  const items = isAdmin ? adminItems : gymOwnerItems;
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -35,15 +45,21 @@ export function AppSidebar() {
               <img src={gym.logo_url} alt="Gym logo" className="h-full w-full object-cover" />
             ) : (
               <div className="h-full w-full gold-gradient grid place-items-center">
-                <Dumbbell className="h-5 w-5 text-primary-foreground" />
+                {isAdmin ? (
+                  <Shield className="h-5 w-5 text-primary-foreground" />
+                ) : (
+                  <Dumbbell className="h-5 w-5 text-primary-foreground" />
+                )}
               </div>
             )}
           </div>
           {!collapsed && (
             <div className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold tracking-tight">GymOS</span>
+              <span className="text-sm font-semibold tracking-tight">
+                {isAdmin ? "GymOS Admin" : "GymOS"}
+              </span>
               <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                {gym?.name || "My Gym"}
+                {isAdmin ? "Administration" : gym?.name || "My Gym"}
               </span>
             </div>
           )}
@@ -55,7 +71,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
-                const active = pathname === item.url || (item.url !== "/dashboard" && pathname.startsWith(item.url));
+                const active = pathname === item.url || (item.url !== "/dashboard" && item.url !== "/admin" && pathname.startsWith(item.url));
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton

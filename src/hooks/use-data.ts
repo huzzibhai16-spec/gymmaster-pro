@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase, type Member, type Attendance, type Payment, type Expense, type Gym, PLAN_PRICES } from "@/lib/supabase";
+import { supabase, type Member, type Attendance, type Payment, type Expense, type Gym, type UserProfile, PLAN_PRICES } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 
 export { PLAN_PRICES };
@@ -32,6 +32,196 @@ export function initials(name: string) {
 export function useGym() {
   const { gym, loading } = useAuth();
   return { gym, loading };
+}
+
+// Admin: Get all gyms
+export function useAllGyms() {
+  const { isAdmin, profile } = useAuth();
+
+  return useQuery({
+    queryKey: ["all-gyms", profile?.user_id],
+    queryFn: async () => {
+      if (!isAdmin) return [];
+
+      const { data, error } = await supabase
+        .from("gyms")
+        .select("*, user_profiles!gyms_user_id_fkey(id, user_id, role, is_suspended)")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!isAdmin && !!profile,
+  });
+}
+
+// Admin: Get all gym owners (user profiles)
+export function useAllGymOwners() {
+  const { isAdmin, profile } = useAuth();
+
+  return useQuery({
+    queryKey: ["all-gym-owners", profile?.user_id],
+    queryFn: async () => {
+      if (!isAdmin) return [];
+
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("role", "gym_owner")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!isAdmin && !!profile,
+  });
+}
+
+// Admin: Update user profile (suspend/unsuspend)
+export function useUpdateUserProfile() {
+  const { isAdmin } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<UserProfile> }) => {
+      if (!isAdmin) throw new Error("Unauthorized");
+
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .update(updates)
+        .eq("user_id", userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-gym-owners"] });
+      queryClient.invalidateQueries({ queryKey: ["all-gyms"] });
+    },
+  });
+}
+
+// Admin: Get gym details with stats
+export function useGymWithStats(gymId: string | null) {
+  const { isAdmin } = useAuth();
+
+  return useQuery({
+    queryKey: ["gym-stats", gymId],
+    queryFn: async () => {
+      if (!isAdmin || !gymId) return null;
+
+      const { data: gym, error: gymError } = await supabase
+        .from("gyms")
+        .select("*, user_profiles!gyms_user_id_fkey(id, user_id, role, is_suspended)")
+        .eq("id", gymId)
+        .single();
+
+      if (gymError) throw gymError;
+
+      // Get member count
+      const { count: memberCount } = await supabase
+        .from("members")
+        .select("*", { count: "exact", head: true })
+        .eq("gym_id", gymId);
+
+      // Get monthly revenue
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
+      const { data: monthPayments } = await supabase
+        .from("payments")
+        .select("amount")
+        .eq("gym_id", gymId)
+        .gte("payment_date", monthStart);
+      const monthlyRevenue = monthPayments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+
+      return {
+        ...gym,
+        memberCount: memberCount || 0,
+        monthlyRevenue,
+      };
+    },
+    enabled: !!isAdmin && !!gymId,
+  });
+}
+
+// Admin: Get all members across all gyms (optionally filter by gym)
+export function useAllMembers(gymId?: string) {
+  const { isAdmin, profile } = useAuth();
+
+  return useQuery({
+    queryKey: ["all-members", gymId, profile?.user_id],
+    queryFn: async () => {
+      if (!isAdmin) return [];
+
+      let query = supabase
+        .from("members")
+        .select("*, gyms(id, name)")
+        .order("created_at", { ascending: false });
+
+      if (gymId) {
+        query = query.eq("gym_id", gymId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!isAdmin && !!profile,
+  });
+}
+
+// Admin: Get dashboard stats for all gyms
+export function useAdminDashboardStats() {
+  const { isAdmin, profile } = useAuth();
+
+  return useQuery({
+    queryKey: ["admin-dashboard-stats", profile?.user_id],
+    queryFn: async () => {
+      if (!isAdmin) return null;
+
+      // Total gyms
+      const { count: totalGyms } = await supabase
+        .from("gyms")
+        .select("*", { count: "exact", head: true });
+
+      // Total members across all gyms
+      const { count: totalMembers } = await supabase
+        .from("members")
+        .select("*", { count: "exact", head: true });
+
+      // Total revenue this month
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
+      const { data: monthPayments } = await supabase
+        .from("payments")
+        .select("amount")
+        .gte("payment_date", monthStart);
+      const monthlyRevenue = monthPayments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+
+      // Active gym owners (not suspended)
+      const { count: activeOwners } = await supabase
+        .from("user_profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("role", "gym_owner")
+        .eq("is_suspended", false);
+
+      // Suspended owners
+      const { count: suspendedOwners } = await supabase
+        .from("user_profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("role", "gym_owner")
+        .eq("is_suspended", true);
+
+      return {
+        totalGyms: totalGyms || 0,
+        totalMembers: totalMembers || 0,
+        monthlyRevenue,
+        activeOwners: activeOwners || 0,
+        suspendedOwners: suspendedOwners || 0,
+      };
+    },
+    enabled: !!isAdmin && !!profile,
+  });
 }
 
 export function useUpdateGym() {

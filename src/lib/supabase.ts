@@ -9,6 +9,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// User role type
+export type UserRole = "admin" | "gym_owner";
+
+// User profile type
+export type UserProfile = {
+  id: string;
+  user_id: string;
+  role: UserRole;
+  is_suspended: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 // Database types
 export type Gym = {
   id: string;

@@ -38,7 +38,8 @@ function LoginPage() {
       setError(result.error);
       setLoading(false);
     } else {
-      navigate({ to: "/dashboard" });
+      // Redirect based on role - the index route handles role-based redirect
+      navigate({ to: "/" });
     }
   }
 

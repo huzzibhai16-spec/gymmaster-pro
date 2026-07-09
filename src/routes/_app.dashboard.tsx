@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Users, UserCheck, UserX, Wallet, CalendarClock, TriangleAlert as AlertTriangle, TrendingUp, Bell, UserPlus, ClipboardCheck, CreditCard, ChartBar as BarChart3, Activity, Heart, CircleCheck as CheckCircle2, Receipt } from "lucide-react";
 import { StatCard } from "@/components/stat-card";
 import { PageHeader } from "@/components/page-header";
@@ -6,6 +6,8 @@ import { useDashboardStats, useMembers, usePayments, useRevenueData, formatPKR, 
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/_app/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — GymOS" }] }),
@@ -13,10 +15,23 @@ export const Route = createFileRoute("/_app/dashboard")({
 });
 
 function Dashboard() {
+  const navigate = useNavigate();
+  const { isAdmin, gym } = useAuth();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: members } = useMembers();
   const { data: payments } = usePayments({ limit: 6 });
   const { data: revenueData } = useRevenueData();
+
+  // Redirect admins to admin dashboard
+  useEffect(() => {
+    if (isAdmin) {
+      navigate({ to: "/admin" });
+    }
+  }, [isAdmin, navigate]);
+
+  if (isAdmin) {
+    return null;
+  }
 
   if (statsLoading) {
     return (

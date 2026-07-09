@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { Bell, Search, Dumbbell } from "lucide-react";
+import { Bell, Search, Dumbbell, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { useEffect } from "react";
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppLayout() {
-  const { user, gym, loading } = useAuth();
+  const { user, gym, profile, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,7 +27,7 @@ function AppLayout() {
           <div className="h-10 w-10 rounded-xl gold-gradient grid place-items-center animate-pulse">
             <Dumbbell className="h-5 w-5 text-primary-foreground" />
           </div>
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -44,7 +44,7 @@ function AppLayout() {
         .slice(0, 2)
         .join("")
         .toUpperCase()
-    : "GY";
+    : isAdmin ? "AD" : "GY";
 
   return (
     <SidebarProvider>
@@ -58,7 +58,7 @@ function AppLayout() {
                 <div className="relative w-full">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search members, payments…"
+                    placeholder={isAdmin ? "Search gyms, owners..." : "Search members, payments..."}
                     className="pl-9 h-9 bg-muted/40 border-border/60 focus-visible:ring-primary/40"
                   />
                 </div>
@@ -73,8 +73,12 @@ function AppLayout() {
                     {gymInitials}
                   </div>
                   <div className="hidden sm:flex flex-col leading-tight">
-                    <span className="text-xs font-medium">{gym?.name || "My Gym"}</span>
-                    <span className="text-[10px] text-muted-foreground">Owner</span>
+                    <span className="text-xs font-medium">
+                      {isAdmin ? "Admin" : gym?.name || "My Gym"}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {isAdmin ? "Administrator" : "Owner"}
+                    </span>
                   </div>
                 </div>
               </div>
