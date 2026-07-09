@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dumbbell, Mail, Lock, ArrowRight, Loader as Loader2, Shield, Building2 } from "lucide-react";
+import { ensureDefaultAccounts } from "@/lib/seed-accounts.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,11 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<"admin" | "gym_owner" | null>(null);
+
+  // Ensure the default test accounts exist (idempotent, runs once on mount).
+  useEffect(() => {
+    ensureDefaultAccounts().catch((err) => console.error("[seed]", err));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
