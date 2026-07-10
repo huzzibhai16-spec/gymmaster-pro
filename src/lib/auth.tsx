@@ -137,15 +137,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Step 2: Verify the user's role matches what they selected
-    const { data: roleData, error: roleError } = await supabase.rpc("get_current_user_role");
+    const { data: profile, error: profileError } = await supabase
+      .from("user_profiles")
+      .select("role, is_suspended")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
 
-    if (roleError || roleData === null) {
-      // Sign out since we can't verify role
+    if (profileError || !profile) {
       await supabase.auth.signOut();
       return { error: "Unable to verify your account role. Please try again." };
     }
 
-    const actualRole = roleData as UserRole;
+    const actualRole = profile.role as UserRole;
 
     // Step 3: Enforce role match
     if (actualRole !== expectedRole) {
@@ -161,9 +164,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: "Account role mismatch. Please use the correct login option." };
     }
 
-    // Step 4: Check suspension
-    const { data: suspendedData } = await supabase.rpc("is_current_user_suspended");
-    if (suspendedData === true) {
+    // Step 4: Check suspension (already fetched above)
+    if (profile.is_suspended) {
       await supabase.auth.signOut();
       return { error: "Your account has been suspended. Please contact support." };
     }
@@ -187,10 +189,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await new Promise((resolve) => setTimeout(resolve, 600));
 
       // Check the role the trigger assigned
-      const { data: roleData } = await supabase.rpc("get_current_user_role");
+      const { data: newProfile } = await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
 
       // Only create gym for gym_owners (not the first admin user)
-      if (roleData !== "admin") {
+      if (newProfile?.role !== "admin") {
         const { error: gymError } = await supabase.from("gyms").insert({
           user_id: data.user.id,
           name: gymName,
