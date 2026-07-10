@@ -8,7 +8,12 @@ function record(error: unknown) {
   lastCapturedError = { error, at: Date.now() };
 }
 
-if (typeof globalThis.addEventListener === "function") {
+const LISTENER_FLAG = "__lovableErrorCaptureInstalled";
+type GlobalWithFlag = typeof globalThis & { [LISTENER_FLAG]?: boolean };
+const g = globalThis as GlobalWithFlag;
+
+if (typeof globalThis.addEventListener === "function" && !g[LISTENER_FLAG]) {
+  g[LISTENER_FLAG] = true;
   globalThis.addEventListener("error", (event) => record((event as ErrorEvent).error ?? event));
   globalThis.addEventListener("unhandledrejection", (event) =>
     record((event as PromiseRejectionEvent).reason),
