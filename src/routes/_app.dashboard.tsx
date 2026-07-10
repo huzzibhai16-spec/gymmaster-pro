@@ -16,20 +16,20 @@ export const Route = createFileRoute("/_app/dashboard")({
 
 function Dashboard() {
   const navigate = useNavigate();
-  const { isAdmin, gym } = useAuth();
+  const { isAdmin, gym, loading: authLoading } = useAuth();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: members } = useMembers();
   const { data: payments } = usePayments({ limit: 6 });
   const { data: revenueData } = useRevenueData();
 
-  // Redirect admins to admin dashboard
+  // Admins must use /admin — redirect immediately once auth is resolved
   useEffect(() => {
-    if (isAdmin) {
-      navigate({ to: "/admin" });
+    if (!authLoading && isAdmin) {
+      navigate({ to: "/admin", replace: true });
     }
-  }, [isAdmin, navigate]);
+  }, [authLoading, isAdmin, navigate]);
 
-  if (isAdmin) {
+  if (authLoading || isAdmin) {
     return null;
   }
 

@@ -2,14 +2,37 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
-import { useAdminDashboardStats, useAllGyms, useAllGymOwners, useUpdateUserProfile, formatPKR } from "@/hooks/use-data";
+import {
+  useAdminDashboardStats,
+  useAllGyms,
+  useAllGymOwners,
+  useUpdateUserProfile,
+  formatPKR,
+} from "@/hooks/use-data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, DollarSign, UserCheck, UserX, MoveVertical as MoreVertical, Loader as Loader2, UserPlus, Search, Dumbbell } from "lucide-react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Building2,
+  Users,
+  DollarSign,
+  UserCheck,
+  UserX,
+  MoveVertical as MoreVertical,
+  Loader as Loader2,
+  UserPlus,
+  Search,
+  Dumbbell,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import {
@@ -53,15 +76,14 @@ function AdminDashboardPage() {
   const { data: owners, isLoading: ownersLoading } = useAllGymOwners();
   const updateProfile = useUpdateUserProfile();
 
-  // Redirect non-admins to dashboard
+  // Strict guard: only admins may access this route
   useEffect(() => {
     if (!authLoading && !isAdmin) {
-      navigate({ to: "/dashboard" });
+      navigate({ to: "/dashboard", replace: true });
     }
   }, [authLoading, isAdmin, navigate]);
 
-  // Show loading while checking auth
-  if (authLoading || !isAdmin) {
+  if (authLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
@@ -74,6 +96,10 @@ function AdminDashboardPage() {
     );
   }
 
+  if (!isAdmin) {
+    return null;
+  }
+
   const handleSuspend = (userId: string, isSuspended: boolean) => {
     updateProfile.mutate({
       userId,
@@ -81,12 +107,10 @@ function AdminDashboardPage() {
     });
   };
 
-  // Filter owners by search query
   const filteredOwners = owners?.filter((owner) =>
-    owner.user_id.toLowerCase().includes(searchQuery.toLowerCase())
+    owner.user_id.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  // Handle creating a new gym owner
   const handleCreateOwner = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setCreateLoading(true);
@@ -98,8 +122,7 @@ function AdminDashboardPage() {
     const gymName = formData.get("gymName") as string;
 
     try {
-      // Create auth user with Supabase admin API (via edge function would be better in production)
-      // For now, we'll use the regular signUp which creates a gym_owner by default
+      // Sign up the new gym owner
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -112,7 +135,9 @@ function AdminDashboardPage() {
       }
 
       if (authData.user) {
-        // Create gym for the new user
+        // Wait for trigger to create user_profile
+        await new Promise((resolve) => setTimeout(resolve, 600));
+
         const { error: gymError } = await supabase.from("gyms").insert({
           user_id: authData.user.id,
           name: gymName,
@@ -126,7 +151,6 @@ function AdminDashboardPage() {
       }
 
       setCreateOpen(false);
-      // Refresh the data by invalidating queries
       window.location.reload();
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : "An error occurred");
@@ -141,7 +165,10 @@ function AdminDashboardPage() {
         title="Admin Dashboard"
         description="Manage all gyms and gym owners"
         actions={
-          <Button onClick={() => setCreateOpen(true)} className="gold-gradient text-primary-foreground hover:opacity-95">
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="gold-gradient text-primary-foreground hover:opacity-95"
+          >
             <UserPlus className="h-4 w-4 mr-1" /> Create Gym Owner
           </Button>
         }
@@ -162,20 +189,44 @@ function AdminDashboardPage() {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-xs">Gym Name</Label>
-                <Input name="gymName" required placeholder="e.g., Elite Fitness Gym" className="h-10 bg-muted/40" />
+                <Input
+                  name="gymName"
+                  required
+                  placeholder="e.g., Elite Fitness Gym"
+                  className="h-10 bg-muted/40"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Email Address</Label>
-                <Input name="email" type="email" required placeholder="owner@gym.com" className="h-10 bg-muted/40" />
+                <Input
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="owner@gym.com"
+                  className="h-10 bg-muted/40"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Password</Label>
-                <Input name="password" type="password" required minLength={6} placeholder="Min 6 characters" className="h-10 bg-muted/40" />
+                <Input
+                  name="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="Min 6 characters"
+                  className="h-10 bg-muted/40"
+                />
               </div>
             </div>
             <DialogFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={createLoading} className="gold-gradient text-primary-foreground">
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createLoading}
+                className="gold-gradient text-primary-foreground"
+              >
                 {createLoading ? "Creating..." : "Create Owner"}
               </Button>
             </DialogFooter>
@@ -241,7 +292,6 @@ function AdminDashboardPage() {
       {/* Tab Content */}
       {activeTab === "overview" && (
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Recent Gyms */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Recent Gyms</CardTitle>
@@ -265,9 +315,7 @@ function AdminDashboardPage() {
                           {gym.address || "No address"}
                         </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {gym.currency}
-                      </div>
+                      <div className="text-sm text-muted-foreground">{gym.currency}</div>
                     </div>
                   ))}
                 </div>
@@ -275,7 +323,6 @@ function AdminDashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Suspended Owners */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -289,32 +336,32 @@ function AdminDashboardPage() {
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : owners?.filter((o) => o.is_suspended).length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4">
-                  No suspended gym owners
-                </p>
+                <p className="text-sm text-muted-foreground py-4">No suspended gym owners</p>
               ) : (
                 <div className="space-y-4">
-                  {owners?.filter((o) => o.is_suspended).map((owner) => (
-                    <div
-                      key={owner.id}
-                      className="flex items-center justify-between rounded-lg border border-border p-3"
-                    >
-                      <div>
-                        <div className="font-medium">{owner.user_id.slice(0, 8)}...</div>
-                        <Badge variant="destructive" className="mt-1">
-                          Suspended
-                        </Badge>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleSuspend(owner.user_id, true)}
-                        disabled={updateProfile.isPending}
+                  {owners
+                    ?.filter((o) => o.is_suspended)
+                    .map((owner) => (
+                      <div
+                        key={owner.id}
+                        className="flex items-center justify-between rounded-lg border border-border p-3"
                       >
-                        Reactivate
-                      </Button>
-                    </div>
-                  ))}
+                        <div>
+                          <div className="font-medium">{owner.user_id.slice(0, 8)}...</div>
+                          <Badge variant="destructive" className="mt-1">
+                            Suspended
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSuspend(owner.user_id, true)}
+                          disabled={updateProfile.isPending}
+                        >
+                          Reactivate
+                        </Button>
+                      </div>
+                    ))}
                 </div>
               )}
             </CardContent>
@@ -359,9 +406,7 @@ function AdminDashboardPage() {
                           <Badge variant="secondary">Disabled</Badge>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {new Date(gym.created_at).toLocaleDateString()}
-                      </TableCell>
+                      <TableCell>{new Date(gym.created_at).toLocaleDateString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -419,14 +464,15 @@ function AdminDashboardPage() {
                         {owner.is_suspended ? (
                           <Badge variant="destructive">Suspended</Badge>
                         ) : (
-                          <Badge variant="default" className="bg-success/20 text-success">
+                          <Badge
+                            variant="default"
+                            className="bg-success/20 text-success"
+                          >
                             Active
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {new Date(owner.created_at).toLocaleDateString()}
-                      </TableCell>
+                      <TableCell>{new Date(owner.created_at).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

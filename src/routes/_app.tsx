@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { Bell, Search, Dumbbell, Shield } from "lucide-react";
+import { Bell, Search, Dumbbell } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { useEffect } from "react";
@@ -11,12 +11,12 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppLayout() {
-  const { user, gym, profile, isAdmin, loading } = useAuth();
+  const { user, gym, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate({ to: "/login" });
+      navigate({ to: "/login", replace: true });
     }
   }, [loading, user, navigate]);
 
@@ -44,7 +44,9 @@ function AppLayout() {
         .slice(0, 2)
         .join("")
         .toUpperCase()
-    : isAdmin ? "AD" : "GY";
+    : isAdmin
+      ? "AD"
+      : "GY";
 
   return (
     <SidebarProvider>
