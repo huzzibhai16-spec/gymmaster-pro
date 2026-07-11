@@ -1,12 +1,11 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Dumbbell, Mail, Lock, ArrowRight, Loader as Loader2, Shield, Building2 } from "lucide-react";
+import { Dumbbell, Mail, Lock, ArrowRight, Loader as Loader2, Eye, EyeOff } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
-import type { UserRole } from "@/lib/supabase";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -24,16 +23,10 @@ function LoginPage() {
   const { signIn } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [showPw, setShowPw] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-
-    if (!selectedRole) {
-      setError("Please select a login type above.");
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -41,8 +34,7 @@ function LoginPage() {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    // signIn verifies the role server-side and returns a role-specific error if mismatched
-    const result = await signIn(email, password, selectedRole);
+    const result = await signIn(email, password);
 
     if (result.error) {
       setError(result.error);
@@ -50,8 +42,7 @@ function LoginPage() {
       return;
     }
 
-    // Redirect based on selected (and verified) role
-    if (selectedRole === "admin") {
+    if (result.role === "admin") {
       navigate({ to: "/admin" });
     } else {
       navigate({ to: "/dashboard" });
@@ -104,55 +95,6 @@ function LoginPage() {
               </div>
             )}
 
-            {/* Role Selection */}
-            <div>
-              <p className="text-sm text-gray-400 mb-3">Select login type:</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedRole("admin");
-                    setError(null);
-                  }}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
-                    selectedRole === "admin"
-                      ? "border-[#D4AF37] bg-[#D4AF37]/10 shadow-lg shadow-[#D4AF37]/20"
-                      : "border-[#2A2A2A] bg-[#1A1A1A] hover:border-[#D4AF37]/50"
-                  }`}
-                >
-                  <Shield
-                    className={`h-6 w-6 ${selectedRole === "admin" ? "text-[#D4AF37]" : "text-gray-400"}`}
-                  />
-                  <span
-                    className={`text-sm font-medium ${selectedRole === "admin" ? "text-white" : "text-gray-400"}`}
-                  >
-                    Admin Login
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedRole("gym_owner");
-                    setError(null);
-                  }}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
-                    selectedRole === "gym_owner"
-                      ? "border-[#D4AF37] bg-[#D4AF37]/10 shadow-lg shadow-[#D4AF37]/20"
-                      : "border-[#2A2A2A] bg-[#1A1A1A] hover:border-[#D4AF37]/50"
-                  }`}
-                >
-                  <Building2
-                    className={`h-6 w-6 ${selectedRole === "gym_owner" ? "text-[#D4AF37]" : "text-gray-400"}`}
-                  />
-                  <span
-                    className={`text-sm font-medium ${selectedRole === "gym_owner" ? "text-white" : "text-gray-400"}`}
-                  >
-                    Gym Owner Login
-                  </span>
-                </button>
-              </div>
-            </div>
-
             <div className="space-y-4">
               {/* Email Field */}
               <div className="space-y-2">
@@ -174,20 +116,36 @@ function LoginPage() {
 
               {/* Password Field */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm text-gray-300 font-medium">
-                  Password
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-sm text-gray-300 font-medium">
+                    Password
+                  </Label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs text-[#D4AF37] hover:text-[#E4BF47] font-medium"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-[#D4AF37] transition-colors" />
                   <Input
                     id="password"
                     name="password"
-                    type="password"
+                    type={showPw ? "text" : "password"}
                     placeholder="Enter your password"
                     required
                     minLength={6}
-                    className="h-12 pl-11 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder:text-gray-600 rounded-lg focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/50 focus:outline-none transition-all"
+                    className="h-12 pl-11 pr-11 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder:text-gray-600 rounded-lg focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/50 focus:outline-none transition-all"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw((s) => !s)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#D4AF37] transition-colors"
+                    aria-label={showPw ? "Hide password" : "Show password"}
+                  >
+                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
             </div>
@@ -195,32 +153,21 @@ function LoginPage() {
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={loading || !selectedRole}
+              disabled={loading}
               className="w-full h-12 bg-gradient-to-r from-[#D4AF37] to-[#C9A227] hover:from-[#E4BF47] hover:to-[#D4AF37] text-[#0A0A0A] font-semibold rounded-lg shadow-lg shadow-[#D4AF37]/25 hover:shadow-[#D4AF37]/40 transition-all duration-300 disabled:opacity-70"
             >
               {loading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <>
-                  {selectedRole === "admin"
-                    ? "Sign In as Admin"
-                    : selectedRole === "gym_owner"
-                      ? "Sign In as Gym Owner"
-                      : "Sign In"}{" "}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  Sign In <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}
             </Button>
 
-            {/* Sign Up Link */}
-            <p className="text-center text-sm text-gray-500 pt-2">
-              New to GymOS?{" "}
-              <Link
-                to="/signup"
-                className="text-[#D4AF37] hover:text-[#E4BF47] font-medium transition-colors"
-              >
-                Create your account
-              </Link>
+            {/* Info */}
+            <p className="text-center text-xs text-gray-500 pt-2">
+              Accounts are provisioned by your administrator.
             </p>
           </form>
 
