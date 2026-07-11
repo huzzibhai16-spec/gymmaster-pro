@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Dumbbell, Upload, Loader as Loader2, X } from "lucide-react";
+import { Dumbbell, Upload, Loader as Loader2, X, Eye, EyeOff, Lock } from "lucide-react";
 import { useGym, useUpdateGym } from "@/hooks/use-data";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({ meta: [{ title: "Settings — GymOS" }] }),
@@ -243,6 +244,8 @@ function SettingsPage() {
           </div>
         </div>
       </div>
+
+      <ChangePasswordCard />
     </div>
   );
 }
@@ -269,6 +272,102 @@ function Field({
         className="h-10 bg-muted/40"
         onChange={(e) => onChange?.(e.target.value)}
       />
+    </div>
+  );
+}
+
+function ChangePasswordCard() {
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setMsg(null);
+    const form = new FormData(e.currentTarget);
+    const password = form.get("password") as string;
+    const confirm = form.get("confirm") as string;
+    if (password.length < 6) {
+      setMsg({ type: "err", text: "Password must be at least 6 characters." });
+      return;
+    }
+    if (password !== confirm) {
+      setMsg({ type: "err", text: "Passwords do not match." });
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+    if (error) {
+      setMsg({ type: "err", text: error.message });
+      return;
+    }
+    setMsg({ type: "ok", text: "Password updated successfully." });
+    (e.target as HTMLFormElement).reset();
+  }
+
+  return (
+    <div className="glass rounded-2xl p-5 space-y-4">
+      <div>
+        <h3 className="text-base font-semibold mb-1">Change Password</h3>
+        <p className="text-xs text-muted-foreground">Update the password for your account.</p>
+      </div>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+        {msg && (
+          <div
+            className={`md:col-span-2 rounded-lg border px-3 py-2 text-sm ${
+              msg.type === "ok"
+                ? "border-green-500/30 bg-green-500/10 text-green-500"
+                : "border-red-500/30 bg-red-500/10 text-red-400"
+            }`}
+          >
+            {msg.text}
+          </div>
+        )}
+        <PasswordInput name="password" label="New password" show={showPw} onToggle={() => setShowPw((s) => !s)} />
+        <PasswordInput name="confirm" label="Confirm new password" show={showPw} onToggle={() => setShowPw((s) => !s)} />
+        <div className="md:col-span-2 flex justify-end">
+          <Button type="submit" disabled={loading} className="gold-gradient text-primary-foreground">
+            {loading ? "Updating…" : "Update password"}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function PasswordInput({
+  name,
+  label,
+  show,
+  onToggle,
+}: {
+  name: string;
+  label: string;
+  show: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}</Label>
+      <div className="relative">
+        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          name={name}
+          type={show ? "text" : "password"}
+          required
+          minLength={6}
+          className="h-10 pl-9 pr-9 bg-muted/40"
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
+          aria-label={show ? "Hide password" : "Show password"}
+        >
+          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
     </div>
   );
 }

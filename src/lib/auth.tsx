@@ -15,8 +15,7 @@ type AuthContextType = {
   signIn: (
     email: string,
     password: string,
-    expectedRole: UserRole,
-  ) => Promise<{ error: string | null }>;
+  ) => Promise<{ error: string | null; role: UserRole | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -120,57 +119,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(
     email: string,
     password: string,
-    expectedRole: UserRole,
-  ): Promise<{ error: string | null }> {
-    // Step 1: Authenticate with Supabase
+  ): Promise<{ error: string | null; role: UserRole | null }> {
     const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (authError) {
-      return { error: authError.message };
+      return { error: authError.message, role: null };
     }
 
     if (!data.user) {
-      return { error: "Authentication failed. Please try again." };
+      return { error: "Authentication failed. Please try again.", role: null };
     }
 
-    // Step 2: Verify the user's role matches what they selected
-    const { data: profile, error: profileError } = await supabase
+    // Detect role from profile
+    const { data: prof, error: profileError } = await supabase
       .from("user_profiles")
       .select("role, is_suspended")
       .eq("user_id", data.user.id)
       .maybeSingle();
 
-    if (profileError || !profile) {
+    if (profileError || !prof) {
       await supabase.auth.signOut();
-      return { error: "Unable to verify your account role. Please try again." };
+      return { error: "Unable to verify your account. Please try again.", role: null };
     }
 
-    const actualRole = profile.role as UserRole;
-
-    // Step 3: Enforce role match
-    if (actualRole !== expectedRole) {
-      // Sign out the user — wrong login button
+    if (prof.is_suspended) {
       await supabase.auth.signOut();
-
-      if (expectedRole === "admin" && actualRole === "gym_owner") {
-        return { error: "This account is not an Admin account." };
-      }
-      if (expectedRole === "gym_owner" && actualRole === "admin") {
-        return { error: "Please use Admin Login." };
-      }
-      return { error: "Account role mismatch. Please use the correct login option." };
+      return { error: "Your account has been suspended. Please contact support.", role: null };
     }
 
-    // Step 4: Check suspension (already fetched above)
-    if (profile.is_suspended) {
-      await supabase.auth.signOut();
-      return { error: "Your account has been suspended. Please contact support." };
-    }
-
-    return { error: null };
+    return { error: null, role: prof.role as UserRole };
   }
 
   async function signUp(

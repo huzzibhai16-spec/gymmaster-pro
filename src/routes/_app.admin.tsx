@@ -33,8 +33,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
+import { useServerFn } from "@tanstack/react-start";
+import { createGymOwner, deleteGymOwner } from "@/lib/admin.functions";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -111,6 +113,10 @@ function AdminDashboardPage() {
     owner.user_id.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  const createOwnerFn = useServerFn(createGymOwner);
+  const deleteOwnerFn = useServerFn(deleteGymOwner);
+  const queryClient = useQueryClient();
+
   const handleCreateOwner = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setCreateLoading(true);
@@ -122,40 +128,23 @@ function AdminDashboardPage() {
     const gymName = formData.get("gymName") as string;
 
     try {
-      // Sign up the new gym owner
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (authError) {
-        setCreateError(authError.message);
-        setCreateLoading(false);
-        return;
-      }
-
-      if (authData.user) {
-        // Wait for trigger to create user_profile
-        await new Promise((resolve) => setTimeout(resolve, 600));
-
-        const { error: gymError } = await supabase.from("gyms").insert({
-          user_id: authData.user.id,
-          name: gymName,
-        });
-
-        if (gymError) {
-          setCreateError(gymError.message);
-          setCreateLoading(false);
-          return;
-        }
-      }
-
+      await createOwnerFn({ data: { email, password, gymName } });
       setCreateOpen(false);
-      window.location.reload();
+      await queryClient.invalidateQueries();
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "An error occurred");
+      setCreateError(err instanceof Error ? err.message : "Failed to create gym owner.");
     } finally {
       setCreateLoading(false);
+    }
+  };
+
+  const handleDeleteOwner = async (userId: string) => {
+    if (!confirm("Delete this gym owner and all their data? This cannot be undone.")) return;
+    try {
+      await deleteOwnerFn({ data: { userId } });
+      await queryClient.invalidateQueries();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete gym owner.");
     }
   };
 
@@ -499,6 +488,14 @@ function AdminDashboardPage() {
                                 Suspend
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteOwner(owner.user_id)}
+                              className="text-destructive"
+                            >
+                              <UserX className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

@@ -211,11 +211,11 @@ function MembersPage() {
                         <TableCell className="text-sm text-muted-foreground">{m.last_visit ? formatDate(m.last_visit) : "—"}</TableCell>
                         <TableCell className="text-right text-sm">{formatPKR(m.amount_paid)}</TableCell>
                         <TableCell className={`text-right text-sm ${m.pending_dues > 0 ? "text-[color:var(--warning)]" : "text-muted-foreground"}`}>{formatPKR(m.pending_dues)}</TableCell>
-                        <TableCell>{statusBadge(m.status)}</TableCell>
+                        <TableCell>{statusBadge(m.status as Member["status"])}</TableCell>
                         <TableCell className="text-right">
                           <div className="inline-flex gap-1">
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setViewMember(m)}><Eye className="h-4 w-4" /></Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditMember(m)}><Pencil className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setViewMember(m as Member)}><Eye className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditMember(m as Member)}><Pencil className="h-4 w-4" /></Button>
                             <Button
                               size="icon"
                               variant="ghost"
