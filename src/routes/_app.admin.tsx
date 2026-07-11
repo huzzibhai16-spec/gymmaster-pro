@@ -488,6 +488,14 @@ function AdminDashboardPage() {
                                 Suspend
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteOwner(owner.user_id)}
+                              className="text-destructive"
+                            >
+                              <UserX className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
