@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Dumbbell, Upload, Loader as Loader2, X } from "lucide-react";
+import { Dumbbell, Upload, Loader as Loader2, X, Eye, EyeOff, Lock } from "lucide-react";
 import { useGym, useUpdateGym } from "@/hooks/use-data";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({ meta: [{ title: "Settings — GymOS" }] }),
@@ -243,6 +244,8 @@ function SettingsPage() {
           </div>
         </div>
       </div>
+
+      <ChangePasswordCard />
     </div>
   );
 }
