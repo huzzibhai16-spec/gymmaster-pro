@@ -15,6 +15,7 @@ type AuthContextType = {
   signIn: (
     email: string,
     password: string,
+    loginAs: "admin" | "gym_owner",
   ) => Promise<{ error: string | null; role: UserRole | null }>;
   signOut: () => Promise<void>;
 };
@@ -119,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(
     email: string,
     password: string,
+    loginAs: "admin" | "gym_owner",
   ): Promise<{ error: string | null; role: UserRole | null }> {
     const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -142,7 +144,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (profileError || !prof) {
       await supabase.auth.signOut();
-      return { error: "Unable to verify your account. Please try again.", role: null };
+      return {
+        error: "Your account has not been approved. Please contact the administrator.",
+        role: null,
+      };
     }
 
     if (prof.is_suspended) {
@@ -150,7 +155,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: "Your account has been suspended. Please contact support.", role: null };
     }
 
-    return { error: null, role: prof.role as UserRole };
+    const userRole = prof.role as UserRole;
+
+    // Role-based login validation
+    if (loginAs === "admin" && userRole !== "admin") {
+      await supabase.auth.signOut();
+      return { error: "This account is not an Admin account.", role: null };
+    }
+
+    if (loginAs === "gym_owner" && userRole === "admin") {
+      await supabase.auth.signOut();
+      return { error: "Please use the Admin Login.", role: null };
+    }
+
+    return { error: null, role: userRole };
   }
 
   async function signUp(

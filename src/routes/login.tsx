@@ -1,11 +1,22 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Dumbbell, Mail, Lock, ArrowRight, Loader as Loader2, Eye, EyeOff } from "lucide-react";
+import {
+  Dumbbell,
+  Mail,
+  Lock,
+  ArrowRight,
+  Loader as Loader2,
+  Eye,
+  EyeOff,
+  Shield,
+  User,
+} from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -24,6 +35,7 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
+  const [loginAs, setLoginAs] = useState<"admin" | "gym_owner">("gym_owner");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -34,7 +46,7 @@ function LoginPage() {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    const result = await signIn(email, password);
+    const result = await signIn(email, password, loginAs);
 
     if (result.error) {
       setError(result.error);
@@ -85,6 +97,50 @@ function LoginPage() {
               Enterprise-grade gym management. Track members, payments, and performance with powerful
               analytics.
             </p>
+          </div>
+
+          {/* Role Tabs */}
+          <div className="mb-6">
+            <div className="relative grid grid-cols-2 gap-1 p-1 rounded-lg bg-[#1A1A1A] border border-[#2A2A2A]">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginAs("gym_owner");
+                  setError(null);
+                }}
+                className={cn(
+                  "relative flex items-center justify-center gap-2 h-10 rounded-md text-sm font-medium transition-all duration-300",
+                  loginAs === "gym_owner"
+                    ? "text-[#0A0A0A]"
+                    : "text-gray-400 hover:text-gray-200",
+                )}
+              >
+                {loginAs === "gym_owner" && (
+                  <span className="absolute inset-0 rounded-md bg-gradient-to-r from-[#D4AF37] to-[#C9A227] shadow-lg shadow-[#D4AF37]/20" />
+                )}
+                <User className="relative h-4 w-4" />
+                <span className="relative">Gym Owner</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginAs("admin");
+                  setError(null);
+                }}
+                className={cn(
+                  "relative flex items-center justify-center gap-2 h-10 rounded-md text-sm font-medium transition-all duration-300",
+                  loginAs === "admin"
+                    ? "text-[#0A0A0A]"
+                    : "text-gray-400 hover:text-gray-200",
+                )}
+              >
+                {loginAs === "admin" && (
+                  <span className="absolute inset-0 rounded-md bg-gradient-to-r from-[#D4AF37] to-[#C9A227] shadow-lg shadow-[#D4AF37]/20" />
+                )}
+                <Shield className="relative h-4 w-4" />
+                <span className="relative">Admin</span>
+              </button>
+            </div>
           </div>
 
           {/* Login Form */}
