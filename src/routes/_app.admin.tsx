@@ -445,7 +445,7 @@ function AdminDashboardPage() {
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by user ID..."
+                  placeholder="Search email or gym..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 h-9 bg-muted/40"
@@ -462,8 +462,8 @@ function AdminDashboardPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User ID</TableHead>
-                    <TableHead>Role</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Gym</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
@@ -472,15 +472,15 @@ function AdminDashboardPage() {
                 <TableBody>
                   {filteredOwners?.map((owner) => (
                     <TableRow key={owner.id}>
-                      <TableCell className="font-mono text-sm">
-                        {owner.user_id.slice(0, 8)}...
+                      <TableCell className="text-sm">
+                        {owner.email ?? <span className="font-mono text-muted-foreground">{owner.user_id.slice(0, 8)}…</span>}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{owner.role}</Badge>
-                      </TableCell>
+                      <TableCell>{owner.gym?.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
                       <TableCell>
                         {owner.is_suspended ? (
                           <Badge variant="destructive">Suspended</Badge>
+                        ) : owner.must_change_password ? (
+                          <Badge variant="outline">Pending password change</Badge>
                         ) : (
                           <Badge
                             variant="default"
@@ -491,6 +491,7 @@ function AdminDashboardPage() {
                         )}
                       </TableCell>
                       <TableCell>{new Date(owner.created_at).toLocaleDateString()}</TableCell>
+
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
