@@ -114,13 +114,20 @@ function AdminDashboardPage() {
     });
   };
 
-  const filteredOwners = owners?.filter((owner) =>
-    owner.user_id.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredOwners = (ownersDetailed || []).filter((o) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      !q ||
+      (o.email ?? "").toLowerCase().includes(q) ||
+      (o.gym?.name ?? "").toLowerCase().includes(q)
+    );
+  });
 
   const createOwnerFn = useServerFn(createGymOwner);
   const deleteOwnerFn = useServerFn(deleteGymOwner);
+  const resetPasswordFn = useServerFn(resetOwnerPassword);
   const queryClient = useQueryClient();
+
 
   const handleCreateOwner = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
