@@ -518,6 +518,12 @@ function AdminDashboardPage() {
                                 Suspend
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem
+                              onClick={() => handleResetOwnerPassword(owner.user_id)}
+                            >
+                              <Lock className="mr-2 h-4 w-4" />
+                              Reset password
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleDeleteOwner(owner.user_id)}
@@ -526,6 +532,7 @@ function AdminDashboardPage() {
                               <UserX className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
+
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
