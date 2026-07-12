@@ -79,7 +79,9 @@ function AdminDashboardPage() {
   const { data: stats, isLoading: statsLoading } = useAdminDashboardStats();
   const { data: gyms, isLoading: gymsLoading } = useAllGyms();
   const { data: owners, isLoading: ownersLoading } = useAllGymOwners();
+  const { data: ownersDetailed } = useGymOwnersDetailed();
   const updateProfile = useUpdateUserProfile();
+
 
   // Strict guard: only admins may access this route
   useEffect(() => {
