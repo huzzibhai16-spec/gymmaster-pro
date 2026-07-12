@@ -160,6 +160,23 @@ function AdminDashboardPage() {
     }
   };
 
+  const handleResetOwnerPassword = async (userId: string) => {
+    const pwd = prompt("Enter a new temporary password (min 6 chars). Owner will be required to change it on next login:");
+    if (!pwd) return;
+    if (pwd.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
+    try {
+      await resetPasswordFn({ data: { userId, password: pwd } });
+      await queryClient.invalidateQueries();
+      alert("Password reset. Share the new temporary password with the owner.");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to reset password.");
+    }
+  };
+
+
   return (
     <div className="space-y-6">
       <PageHeader
