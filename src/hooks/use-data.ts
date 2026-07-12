@@ -1,6 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, type Member, type Attendance, type Payment, type Expense, type Gym, type UserProfile, PLAN_PRICES } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
+import { listGymOwners } from "@/lib/admin.functions";
+
+// Admin: rich gym owners list (email + gym) via server function
+export function useGymOwnersDetailed() {
+  const { isAdmin, profile } = useAuth();
+  return useQuery({
+    queryKey: ["gym-owners-detailed", profile?.user_id],
+    queryFn: async () => (isAdmin ? await listGymOwners() : []),
+    enabled: !!isAdmin && !!profile,
+  });
+}
+
 
 export { PLAN_PRICES };
 

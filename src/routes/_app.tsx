@@ -11,14 +11,20 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppLayout() {
-  const { user, gym, isAdmin, loading } = useAuth();
+  const { user, gym, isAdmin, profile, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+    if (!user) {
       navigate({ to: "/login", replace: true });
+      return;
     }
-  }, [loading, user, navigate]);
+    if (profile?.must_change_password) {
+      navigate({ to: "/reset-password", replace: true });
+    }
+  }, [loading, user, profile?.must_change_password, navigate]);
+
 
   if (loading) {
     return (

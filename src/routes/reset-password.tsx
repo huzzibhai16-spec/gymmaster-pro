@@ -47,14 +47,28 @@ function ResetPasswordPage() {
     }
     setLoading(true);
     const { error: err } = await supabase.auth.updateUser({ password });
-    setLoading(false);
     if (err) {
+      setLoading(false);
       setError(err.message);
       return;
     }
+    // Best-effort: clear must_change_password flag for the signed-in user.
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      if (sess.session?.user?.id) {
+        await supabase
+          .from("user_profiles")
+          .update({ must_change_password: false })
+          .eq("user_id", sess.session.user.id);
+      }
+    } catch {
+      /* non-fatal */
+    }
+    setLoading(false);
     setDone(true);
     await supabase.auth.signOut();
     setTimeout(() => navigate({ to: "/login" }), 1500);
+
   }
 
   return (

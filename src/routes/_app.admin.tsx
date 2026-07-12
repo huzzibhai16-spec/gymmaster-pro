@@ -6,9 +6,11 @@ import {
   useAdminDashboardStats,
   useAllGyms,
   useAllGymOwners,
+  useGymOwnersDetailed,
   useUpdateUserProfile,
   formatPKR,
 } from "@/hooks/use-data";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,8 @@ import {
   UserPlus,
   Search,
   Dumbbell,
+  Lock,
+
 } from "lucide-react";
 import {
   Dialog,
@@ -35,8 +39,9 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
-import { createGymOwner, deleteGymOwner } from "@/lib/admin.functions";
+import { createGymOwner, deleteGymOwner, resetOwnerPassword } from "@/lib/admin.functions";
 import { useQueryClient } from "@tanstack/react-query";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,7 +81,9 @@ function AdminDashboardPage() {
   const { data: stats, isLoading: statsLoading } = useAdminDashboardStats();
   const { data: gyms, isLoading: gymsLoading } = useAllGyms();
   const { data: owners, isLoading: ownersLoading } = useAllGymOwners();
+  const { data: ownersDetailed } = useGymOwnersDetailed();
   const updateProfile = useUpdateUserProfile();
+
 
   // Strict guard: only admins may access this route
   useEffect(() => {
@@ -109,13 +116,20 @@ function AdminDashboardPage() {
     });
   };
 
-  const filteredOwners = owners?.filter((owner) =>
-    owner.user_id.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredOwners = (ownersDetailed || []).filter((o) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      !q ||
+      (o.email ?? "").toLowerCase().includes(q) ||
+      (o.gym?.name ?? "").toLowerCase().includes(q)
+    );
+  });
 
   const createOwnerFn = useServerFn(createGymOwner);
   const deleteOwnerFn = useServerFn(deleteGymOwner);
+  const resetPasswordFn = useServerFn(resetOwnerPassword);
   const queryClient = useQueryClient();
+
 
   const handleCreateOwner = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -147,6 +161,23 @@ function AdminDashboardPage() {
       alert(err instanceof Error ? err.message : "Failed to delete gym owner.");
     }
   };
+
+  const handleResetOwnerPassword = async (userId: string) => {
+    const pwd = prompt("Enter a new temporary password (min 6 chars). Owner will be required to change it on next login:");
+    if (!pwd) return;
+    if (pwd.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
+    try {
+      await resetPasswordFn({ data: { userId, password: pwd } });
+      await queryClient.invalidateQueries();
+      alert("Password reset. Share the new temporary password with the owner.");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to reset password.");
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -416,7 +447,7 @@ function AdminDashboardPage() {
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by user ID..."
+                  placeholder="Search email or gym..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 h-9 bg-muted/40"
@@ -433,8 +464,8 @@ function AdminDashboardPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User ID</TableHead>
-                    <TableHead>Role</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Gym</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
@@ -443,15 +474,15 @@ function AdminDashboardPage() {
                 <TableBody>
                   {filteredOwners?.map((owner) => (
                     <TableRow key={owner.id}>
-                      <TableCell className="font-mono text-sm">
-                        {owner.user_id.slice(0, 8)}...
+                      <TableCell className="text-sm">
+                        {owner.email ?? <span className="font-mono text-muted-foreground">{owner.user_id.slice(0, 8)}…</span>}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{owner.role}</Badge>
-                      </TableCell>
+                      <TableCell>{owner.gym?.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
                       <TableCell>
                         {owner.is_suspended ? (
                           <Badge variant="destructive">Suspended</Badge>
+                        ) : owner.must_change_password ? (
+                          <Badge variant="outline">Pending password change</Badge>
                         ) : (
                           <Badge
                             variant="default"
@@ -462,6 +493,7 @@ function AdminDashboardPage() {
                         )}
                       </TableCell>
                       <TableCell>{new Date(owner.created_at).toLocaleDateString()}</TableCell>
+
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -488,6 +520,12 @@ function AdminDashboardPage() {
                                 Suspend
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem
+                              onClick={() => handleResetOwnerPassword(owner.user_id)}
+                            >
+                              <Lock className="mr-2 h-4 w-4" />
+                              Reset password
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleDeleteOwner(owner.user_id)}
@@ -496,6 +534,7 @@ function AdminDashboardPage() {
                               <UserX className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
+
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

@@ -11,9 +11,11 @@ export type UserProfile = {
   user_id: string;
   role: UserRole;
   is_suspended: boolean;
+  must_change_password: boolean;
   created_at: string;
   updated_at: string;
 };
+
 
 // Database types
 export type Gym = {
