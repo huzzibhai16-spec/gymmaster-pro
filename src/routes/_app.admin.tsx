@@ -27,6 +27,8 @@ import {
   UserPlus,
   Search,
   Dumbbell,
+  Lock,
+
 } from "lucide-react";
 import {
   Dialog,
