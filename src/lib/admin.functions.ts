@@ -32,7 +32,7 @@ export const createGymOwner = createServerFn({ method: "POST" })
     if (data.password.length < 6) {
       throw new Error("Password must be at least 6 characters.");
     }
-    if (data.email.toLowerCase() === SUPER_ADMIN_EMAIL) {
+    if (isSuperAdminEmail(data.email)) {
       throw new Error("This email is reserved for the super admin.");
     }
     return data;
