@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const SUPER_ADMIN_EMAIL = "adminofos@gmail.com";
+const SUPER_ADMIN_EMAILS = ["huzzibhai@gmail.com", "huzaifasiddike@gmail.com"] as const;
+const isSuperAdminEmail = (email: string) =>
+  SUPER_ADMIN_EMAILS.includes(email.toLowerCase() as (typeof SUPER_ADMIN_EMAILS)[number]);
 
 async function assertAdmin(context: { supabase: any; userId: string }) {
   const { data: caller, error } = await context.supabase
@@ -30,7 +32,7 @@ export const createGymOwner = createServerFn({ method: "POST" })
     if (data.password.length < 6) {
       throw new Error("Password must be at least 6 characters.");
     }
-    if (data.email.toLowerCase() === SUPER_ADMIN_EMAIL) {
+    if (isSuperAdminEmail(data.email)) {
       throw new Error("This email is reserved for the super admin.");
     }
     return data;
